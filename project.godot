@@ -10,16 +10,17 @@ config_version=5
 
 [application]
 
-config/name="Pop Blocks"
-config/description="Puzzle casual: toque em grupos de blocos da mesma cor."
+config/name="Colorbitz"
+config/description="Colorbitz: puzzle neon. Toque em grupos de blocos da mesma cor."
 run/main_scene="res://scenes/main_menu.tscn"
-config/features=PackedStringArray("4.7", "GL Compatibility")
 config/quit_on_go_back=false
+config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
+Audio="*res://scripts/audio.gd"
 
 [display]
 
@@ -40,4 +41,4 @@ theme/custom="res://assets/theme.tres"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
-environment/defaults/default_clear_color=Color(0.1176, 0.1333, 0.2, 1)
+environment/defaults/default_clear_color=Color(0.0196, 0.0275, 0.0784, 1)
