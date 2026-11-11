@@ -12,26 +12,43 @@ const COLORS: Array[Color] = [
 	Color("#FF3B3B"),  # vermelho  ✚ cruz
 ]
 const COLOR_NAMES: Array[String] = ["azuis", "roxos", "verdes", "rosa", "amarelos", "vermelhos"]
+## Bomba (mesmo valor de Board.BOMB) e sua cor neon laranja.
+const BOMB := preload("res://scripts/board.gd").BOMB
+const BOMB_COLOR := Color("#FF8A3D")
+const SPARK_COLOR := Color("#FFE53D")
 
 var color_index := 0:
 	set(value):
 		color_index = value
+		set_process(value == BOMB)  # só a bomba é animada (pavio piscando)
 		queue_redraw()
 
 var _style := StyleBoxFlat.new()
+var _time := 0.0
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_style.anti_aliasing = true
 	resized.connect(func(): pivot_offset = size / 2.0)
+	set_process(color_index == BOMB)
+
+
+func _process(delta: float) -> void:
+	_time += delta
+	queue_redraw()
 
 
 static func color_of(index: int) -> Color:
+	if index == BOMB:
+		return BOMB_COLOR
 	return COLORS[index % COLORS.size()]
 
 
 func _draw() -> void:
+	if color_index == BOMB:
+		_draw_bomb()
+		return
 	var col := color_of(color_index)
 	var pad := size.x * 0.08
 	_style.bg_color = col.darkened(0.6)
@@ -75,4 +92,39 @@ static func icon_points(index: int, c: Vector2, s: float) -> PackedVector2Array:
 			for v in [Vector2(-a, -b), Vector2(a, -b), Vector2(a, -a), Vector2(b, -a), Vector2(b, a), Vector2(a, a),
 					Vector2(a, b), Vector2(-a, b), Vector2(-a, a), Vector2(-b, a), Vector2(-b, -a), Vector2(-a, -a)]:
 				pts.append(c + v)
+	return pts
+
+
+## Bomba neon: corpo redondo escuro com contorno laranja, brilho pulsando,
+## pavio e faísca piscando.
+func _draw_bomb() -> void:
+	var c := size / 2.0 + Vector2(0, size.x * 0.06)
+	var r := size.x * 0.3
+	var pulse := 0.5 + 0.5 * sin(_time * 7.0)
+	var w := maxf(2.0, size.x * 0.055)
+	draw_circle(c, r * 1.45, Color(BOMB_COLOR, 0.10 + 0.14 * pulse))  # halo
+	draw_circle(c, r * 1.2, Color(BOMB_COLOR, 0.12 + 0.10 * pulse))
+	draw_circle(c, r, Color("#1c0f2e"))  # corpo
+	draw_arc(c, r, 0.0, TAU, 40, BOMB_COLOR, w, true)  # contorno neon
+	draw_arc(c, r * 0.62, PI * 1.05, PI * 1.45, 10, Color(1, 1, 1, 0.55), w * 0.8, true)  # reflexo
+	# bocal e pavio
+	var neck := c + Vector2(r * 0.5, -r * 0.78)
+	draw_line(c + Vector2(r * 0.3, -r * 0.88), neck + Vector2(r * 0.12, r * 0.05), BOMB_COLOR, w * 1.4, true)
+	var fuse := PackedVector2Array()
+	for i in 7:
+		var t := i / 6.0
+		fuse.append(neck + Vector2(t * r * 0.55, -t * r * 0.55 - sin(t * PI) * r * 0.25))
+	draw_polyline(fuse, Color(1, 0.85, 0.6, 0.9), w * 0.7, true)
+	# faísca
+	var tip := fuse[fuse.size() - 1]
+	var spark := r * (0.32 + 0.18 * pulse)
+	draw_circle(tip, spark * 1.3, Color(SPARK_COLOR, 0.25 + 0.3 * pulse))
+	draw_colored_polygon(_spark_points(tip, spark), SPARK_COLOR.lightened(0.3 * pulse))
+
+
+static func _spark_points(c: Vector2, s: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 8:
+		var rr := s if i % 2 == 0 else s * 0.4
+		pts.append(c + Vector2.from_angle(i * PI / 4.0 + PI / 8.0) * rr)
 	return pts

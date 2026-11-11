@@ -25,6 +25,8 @@ func _initialize() -> void:
 	_save("lose", _lose(), 0.7)
 	_save("music_menu", _music_menu(), 0.6)
 	_save("music_level", _music_level(), 0.7)
+	# Gerado por último para não mudar a sequência aleatória dos sons anteriores.
+	_save("powerup", _powerup(), 0.75)
 	quit()
 
 
@@ -105,6 +107,19 @@ func _lose() -> PackedFloat32Array:
 		var dur := 0.7 if last else 0.28
 		_tone(b, i * 0.24, dur, f, f * (0.94 if last else 1.0), Wave.SOFT_SQUARE, 0.35, 0.01, 0.35 if last else 0.15)
 		_tone(b, i * 0.24, dur, f / 2.0, f / 2.0 * (0.94 if last else 1.0), Wave.SINE, 0.3, 0.01, 0.3)
+	return b
+
+
+## Bomba criada: varredura subindo + brilho em arpejo rápido.
+func _powerup() -> PackedFloat32Array:
+	var b := _buf(0.7)
+	_tone(b, 0.0, 0.35, 300, 1200, Wave.SOFT_SQUARE, 0.3, 0.01, 0.25)
+	_tone(b, 0.0, 0.35, 600, 2400, Wave.SINE, 0.3, 0.01, 0.25)
+	var notes := [79, 83, 86, 91, 95]  # G5 B5 D6 G6 B6
+	for i in notes.size():
+		var f := _midi(notes[i])
+		_tone(b, 0.18 + i * 0.05, 0.4, f, f, Wave.TRIANGLE, 0.35, 0.002, 0.1)
+	_noise(b, 0.15, 0.4, 0.12, 0.01, 0.12, 8000, 5000, true)
 	return b
 
 

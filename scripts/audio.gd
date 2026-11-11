@@ -2,7 +2,7 @@
 ## Os arquivos são gerados por tools/generate_audio.gd.
 extends Node
 
-const SFX_NAMES := ["pop", "click", "thud", "combo", "boom", "star", "win", "lose"]
+const SFX_NAMES := ["pop", "click", "thud", "combo", "boom", "star", "win", "lose", "powerup"]
 const MUSIC := {
 	"menu": "res://assets/audio/music_menu.wav",
 	"level": "res://assets/audio/music_level.wav",
