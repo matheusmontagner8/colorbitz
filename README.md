@@ -1,32 +1,33 @@
-# Pop Blocks
+# Colorbitz
 
 [![Testes](https://github.com/matheusmontagner8/pop-blocks/actions/workflows/tests.yml/badge.svg)](https://github.com/matheusmontagner8/pop-blocks/actions/workflows/tests.yml)
 
-Puzzle casual para celular feito em **Godot 4** com **GDScript**. Toque em grupos
-de blocos da mesma cor para removê-los e cumpra a meta da fase antes de acabarem
-as jogadas.
+Puzzle casual com visual **neon** para celular, feito em **Godot 4** com **GDScript**.
+Toque em grupos de blocos da mesma cor para estourá-los e cumpra a meta da fase
+antes de acabarem as jogadas.
 
 <p align="center">
   <img src="docs/menu.png" width="200" alt="Menu principal">
   <img src="docs/levels.png" width="200" alt="Seleção de fases">
-  <img src="docs/screenshot.png" width="200" alt="Tela do jogo">
+  <img src="docs/effects.png" width="200" alt="Combinação grande com partículas">
   <img src="docs/result.png" width="200" alt="Resultado da fase">
 </p>
 
 > Projeto em desenvolvimento: este é o MVP do meu primeiro jogo para Android.
-> O nome "Pop Blocks" é provisório.
 
 ## Como jogar
 
 - Toque em um bloco: ele e todos os vizinhos da mesma cor (cima, baixo, esquerda,
-  direita) somem, se o grupo tiver 2 ou mais blocos.
+  direita) estouram, se o grupo tiver 2 ou mais blocos.
 - Os blocos de cima caem e as colunas vazias se fecham para a esquerda.
-- Pontos por jogada: `n × n × 10`, em que `n` é o tamanho do grupo. Grupos maiores valem bem mais.
-- Cada fase tem uma meta (pontuação ou "remover X blocos de uma cor") e um limite de jogadas.
-- Tocar em um bloco isolado não gasta jogada.
+- Pontos por jogada: `n × n × 10`, em que `n` é o tamanho do grupo. Grupos maiores valem bem mais,
+  e combinações de 6, 9 e 13+ blocos rendem "Ótimo!", "Incrível!" e "Fantástico!".
+- Cada fase tem uma meta (pontuação ou "estourar X blocos de uma cor") e um limite de jogadas.
+- Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
   Cada vitória libera a fase seguinte (30 fases).
-- Cada cor tem também um ícone próprio (●, ■, ▲, ◆…), para que quem tem daltonismo jogue sem problema.
+- As cores entram aos poucos (3 → 6): azul, roxo, verde, rosa, amarelo e vermelho.
+  Cada cor tem também um ícone próprio (○ □ △ ◇ ☆ ✚), para que quem tem daltonismo jogue sem problema.
 
 ## Destaques técnicos
 
@@ -36,8 +37,13 @@ as jogadas.
 - **Fases em dados**: todas as fases ficam em [`data/levels.json`](data/levels.json),
   nenhuma é escrita no código.
 - **Dificuldade medida, não chutada**: [`tools/balance.gd`](tools/balance.gd) joga cada
-  fase centenas de vezes com um jogador "guloso" e um aleatório e mostra a taxa de
-  vitória. A curva vai de 100% nas primeiras fases a cerca de 45% (guloso) nas últimas.
+  fase centenas de vezes com um jogador "guloso" e um aleatório e mostra a taxa de vitória.
+  A curva cai de 100% para cerca de 50% em "dente de serra", aliviando a cada cor nova.
+- **Áudio 100% sintetizado** por [`tools/generate_audio.gd`](tools/generate_audio.gd):
+  efeitos (pop, explosão de desenho animado, estrelas…) e duas músicas em loop
+  (calma nos menus, animada nas fases), sem samples de terceiros.
+- **Visual neon leve**: brilho com `StyleBoxFlat` (sombra colorida) e partículas
+  `CPUParticles2D` com mistura aditiva, sem pós-processamento, para rodar em celulares modestos.
 - **Progresso salvo** em `user://save.json` ([`scripts/progress.gd`](scripts/progress.gd)),
   com gravação atômica (arquivo temporário + rename) e recuperação de save corrompido.
 - **Testes automatizados** com um executor próprio e leve, rodando em modo headless
@@ -60,8 +66,8 @@ godot --headless --path . -s tests/run_tests.gd
 
 ### Teste de fumaça da interface (gera as imagens de `docs/`)
 
-Percorre todas as telas, simula toques e testa pausar e reiniciar durante uma animação.
-Não altera o seu save.
+Percorre todas as telas, simula toques e efeitos e testa pausar e reiniciar durante
+uma animação. Não altera o seu save.
 
 ```bash
 godot --path . -s tools/screenshot.gd
@@ -73,25 +79,35 @@ godot --path . -s tools/screenshot.gd
 godot --headless --path . -s tools/balance.gd -- 300
 ```
 
+### Regerar os sons
+
+```bash
+godot --headless --path . -s tools/generate_audio.gd
+```
+
 ## Estrutura
 
 ```
+assets/    tema, fonte e áudio gerado
 data/      fases (levels.json)
 docs/      imagens do README
 scenes/    cenas: menu, seleção de fases, opções e jogo
 scripts/   lógica pura (board, game_session, progress, level_loader),
-           autoload GameState e telas (game_view, ui/)
+           autoloads GameState e Audio, telas (game_view, ui/) e efeitos (fx)
 tests/     testes da lógica e executor
-tools/     teste de fumaça/capturas e simulador de dificuldade
+tools/     teste de fumaça, simulador de dificuldade e gerador de áudio
 ```
 
 ## Roteiro
 
 - [x] **Semana 1**: tabuleiro, remoção de grupos, gravidade, pontuação e testes
 - [x] **Semana 2**: menu, seleção de fases, pausa, resultado, 30 fases em JSON e progresso salvo
-- [ ] **Semana 3**: arte, sons, música e as 30 fases balanceadas
+- [x] **Semana 3**: visual neon, partículas, combos, vibração, sons, músicas e fases rebalanceadas
+- [ ] Teste em celular Android real
 - [ ] **Semana 4**: anúncios e publicação na Google Play (teste fechado)
 
-## Licença
+## Créditos e licenças
 
-Código sob a licença [MIT](LICENSE).
+- Código e áudio: licença [MIT](LICENSE).
+- Fonte [Fredoka](https://github.com/hafontia/Fredoka-One): SIL Open Font License 1.1
+  ([`assets/fonts/OFL.txt`](assets/fonts/OFL.txt)).

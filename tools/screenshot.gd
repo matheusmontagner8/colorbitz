@@ -44,12 +44,22 @@ func _initialize() -> void:
 	assert(game._board_root.get_child_count() == game._blocks.size(), "blocos órfãos após reiniciar")
 	print("pausa/reinício durante animação: ok")
 
+	# Efeitos de combinação grande (só visual: o tabuleiro não muda).
+	var group: Array = game._session.board.best_group()
+	var fake := []
+	while fake.size() < 13:
+		fake.append_array(group)
+	game._play_effects({"removed": fake.slice(0, 13), "color": game._session.board.get_cell(group[0].x, group[0].y), "points": 1690})
+	await create_timer(0.14).timeout
+	await _save("res://docs/effects.png")
+	await create_timer(1.2).timeout
+
 	# Tela de resultado (vitória forçada).
 	game._session.status = game.GameSession.Status.WON
 	game._session.moves_left = game._session.max_moves
 	game._session.score = 1240
 	game._finish()
-	await create_timer(0.4).timeout
+	await create_timer(1.6).timeout
 	await _save("res://docs/result.png")
 	print("captura concluída")
 	quit()
