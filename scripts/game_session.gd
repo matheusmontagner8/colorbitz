@@ -5,7 +5,7 @@ extends RefCounted
 enum Status { PLAYING, WON, LOST }
 
 ## Fração de jogadas que sobram para ganhar 2 e 3 estrelas.
-const DEFAULT_STAR_THRESHOLDS := [0.15, 0.30]
+const DEFAULT_STAR_THRESHOLDS := [0.20, 0.40]
 
 var board  # board.gd
 var score := 0

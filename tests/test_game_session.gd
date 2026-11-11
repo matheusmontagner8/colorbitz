@@ -70,10 +70,14 @@ func test_lose_when_no_groups_left() -> void:
 func test_stars_by_moves_left() -> void:
 	var s := _session(["11"], 10, {"type": "score", "target": 1000})
 	s.status = GameSession.Status.WON
+	s.moves_left = 4
+	assert_eq(s.stars(), 3, "40% sobrando")
 	s.moves_left = 3
-	assert_eq(s.stars(), 3)
-	s.moves_left = 2
 	assert_eq(s.stars(), 2)
+	s.moves_left = 2
+	assert_eq(s.stars(), 2, "20% sobrando")
+	s.moves_left = 1
+	assert_eq(s.stars(), 1)
 	s.moves_left = 0
 	assert_eq(s.stars(), 1)
 	s.status = GameSession.Status.LOST
