@@ -40,6 +40,20 @@ func has_next_level() -> bool:
 	return current_index + 1 < levels.size()
 
 
+func is_unlocked(index: int) -> bool:
+	return progress.is_unlocked(index, levels)
+
+
+## Estrelas exigidas pela fase (0 se não for um portão).
+func stars_required(index: int) -> int:
+	return progress.stars_required(index, levels)
+
+
+## Quantas estrelas ainda faltam para liberar a fase (0 = nenhuma).
+func missing_stars(index: int) -> int:
+	return progress.missing_stars(index, levels)
+
+
 ## Registra uma vitória na fase atual e salva.
 func complete_current_level(stars: int) -> void:
 	if progress.record_result(current_level().get("id", current_index + 1), stars):

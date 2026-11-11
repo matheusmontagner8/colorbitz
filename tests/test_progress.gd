@@ -37,6 +37,40 @@ func test_float_and_int_ids_are_the_same_level() -> void:
 	assert_eq(p.to_dict().stars.keys(), ["1", "2"])
 
 
+func test_star_gate_needs_minimum_stars() -> void:
+	# Fase 4 (índice 3) é um portão: exige 7 estrelas nas fases 1 a 3.
+	var levels := [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4, "stars_required": 7}, {"id": 5}]
+	var p := Progress.new()
+	p.record_result(1, 3)
+	p.record_result(2, 2)
+	p.record_result(3, 1)
+	assert_eq(p.stars_before(3, levels), 6)
+	assert_eq(p.missing_stars(3, levels), 1)
+	assert_false(p.is_unlocked(3, levels), "venceu a fase 3, mas só tem 6 de 7 estrelas")
+	p.record_result(3, 2)  # melhora a fase 3
+	assert_eq(p.missing_stars(3, levels), 0)
+	assert_true(p.is_unlocked(3, levels), "7 estrelas liberam o portão")
+
+
+func test_star_gate_still_needs_previous_level_won() -> void:
+	var levels := [{"id": 1}, {"id": 2}, {"id": 3, "stars_required": 3}]
+	var p := Progress.new()
+	p.record_result(1, 3)
+	assert_eq(p.missing_stars(2, levels), 0)
+	assert_false(p.is_unlocked(2, levels), "estrelas suficientes, mas a fase 2 não foi vencida")
+
+
+func test_star_gate_counts_only_previous_levels() -> void:
+	var levels := [{"id": 1}, {"id": 2, "stars_required": 3}, {"id": 3}]
+	var p := Progress.new()
+	p.record_result(1, 2)
+	p.record_result(3, 3)  # estrelas de fases posteriores não contam
+	assert_eq(p.stars_before(1, levels), 2)
+	assert_false(p.is_unlocked(1, levels))
+	assert_eq(Progress.stars_required(1, levels), 3)
+	assert_eq(Progress.stars_required(0, levels), 0)
+
+
 func test_keeps_best_stars() -> void:
 	var p := Progress.new()
 	assert_true(p.record_result(1, 2))

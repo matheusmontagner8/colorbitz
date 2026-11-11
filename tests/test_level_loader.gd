@@ -19,6 +19,24 @@ func test_levels_file_is_valid() -> void:
 			assert_true(int(goal.get("color", -1)) < colors, "fase %s: cor da meta existe" % id)
 
 
+func test_star_gates_are_reachable_and_increasing() -> void:
+	var levels := LevelLoader.load_levels()
+	var last_required := 0
+	for i in levels.size():
+		var required := int(levels[i].get("stars_required", 0))
+		if required == 0:
+			continue
+		assert_true(required <= i * 3, "fase %d exige %d estrelas, mas só há %d possíveis antes dela" % [i + 1, required, i * 3])
+		assert_true(required > last_required, "fase %d: portões devem exigir cada vez mais estrelas" % (i + 1))
+		last_required = required
+
+
+func test_ids_are_unique_and_sequential() -> void:
+	var levels := LevelLoader.load_levels()
+	for i in levels.size():
+		assert_eq(int(levels[i].get("id", 0)), i + 1, "id da fase na posição %d" % i)
+
+
 func test_build_session_from_level() -> void:
 	var level := {"width": 5, "height": 6, "colors": 3, "moves": 7, "seed": 1,
 		"goal": {"type": "score", "target": 100}}

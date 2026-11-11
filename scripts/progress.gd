@@ -33,13 +33,36 @@ func record_result(level_id, earned_stars: int) -> bool:
 	return true
 
 
-## A primeira fase está sempre liberada; as demais exigem vencer a anterior.
+## Uma fase é liberada quando:
+##  1. a fase anterior foi vencida (a primeira está sempre liberada), e
+##  2. se a fase tiver "stars_required" (fases-portão: 10, 20, 30...), o jogador
+##     soma pelo menos essa quantidade de estrelas nas fases anteriores a ela.
 func is_unlocked(index: int, levels: Array) -> bool:
-	if index <= 0:
-		return true
-	if index >= levels.size():
+	if index < 0 or index >= levels.size():
 		return false
-	return stars_for(levels[index - 1].get("id", index)) > 0
+	if index > 0 and stars_for(levels[index - 1].get("id", index)) <= 0:
+		return false
+	return missing_stars(index, levels) == 0
+
+
+## Estrelas exigidas para liberar a fase (0 se ela não for um portão).
+static func stars_required(index: int, levels: Array) -> int:
+	if index < 0 or index >= levels.size():
+		return 0
+	return int(levels[index].get("stars_required", 0))
+
+
+## Soma das melhores estrelas nas fases antes de [param index].
+func stars_before(index: int, levels: Array) -> int:
+	var total := 0
+	for i in mini(index, levels.size()):
+		total += stars_for(levels[i].get("id", i + 1))
+	return total
+
+
+## Quantas estrelas ainda faltam para o portão da fase (0 = nenhuma).
+func missing_stars(index: int, levels: Array) -> int:
+	return maxi(0, stars_required(index, levels) - stars_before(index, levels))
 
 
 func total_stars() -> int:
