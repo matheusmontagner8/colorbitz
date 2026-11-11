@@ -26,6 +26,17 @@ func test_winning_unlocks_next_level() -> void:
 	assert_false(p.is_unlocked(2, LEVELS))
 
 
+func test_float_and_int_ids_are_the_same_level() -> void:
+	var p := Progress.new()
+	p.record_result(1, 2)
+	assert_eq(p.stars_for(1.0), 2, "id do JSON vem como float")
+	p.record_result(2.0, 3)
+	assert_eq(p.stars_for(2), 3)
+	var json_levels: Array = JSON.parse_string('[{"id": 1}, {"id": 2}, {"id": 3}]')
+	assert_true(p.is_unlocked(2, json_levels))
+	assert_eq(p.to_dict().stars.keys(), ["1", "2"])
+
+
 func test_keeps_best_stars() -> void:
 	var p := Progress.new()
 	assert_true(p.record_result(1, 2))

@@ -10,8 +10,16 @@ var sound_on := true
 var music_on := true
 
 
+## Normaliza o id da fase: o JSON devolve números como float (1.0) e
+## str(1.0) seria "1.0", diferente de "1".
+static func _key(level_id) -> String:
+	if typeof(level_id) == TYPE_FLOAT or typeof(level_id) == TYPE_INT:
+		return str(int(level_id))
+	return str(level_id)
+
+
 func stars_for(level_id) -> int:
-	return int(stars.get(str(level_id), 0))
+	return int(stars.get(_key(level_id), 0))
 
 
 ## Registra o resultado de uma vitória. Só guarda se for melhor que o anterior.
@@ -20,7 +28,7 @@ func record_result(level_id, earned_stars: int) -> bool:
 	earned_stars = clampi(earned_stars, 0, 3)
 	if earned_stars <= stars_for(level_id):
 		return false
-	stars[str(level_id)] = earned_stars
+	stars[_key(level_id)] = earned_stars
 	return true
 
 
