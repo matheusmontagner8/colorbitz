@@ -1,6 +1,6 @@
 # Colorbitz
 
-[![Testes](https://github.com/matheusmontagner8/pop-blocks/actions/workflows/tests.yml/badge.svg)](https://github.com/matheusmontagner8/pop-blocks/actions/workflows/tests.yml)
+[![Testes](https://github.com/matheusmontagner8/colorbitz/actions/workflows/tests.yml/badge.svg)](https://github.com/matheusmontagner8/colorbitz/actions/workflows/tests.yml)
 
 Puzzle casual com visual **neon** para celular, feito em **Godot 4** com **GDScript**.
 Toque em grupos de blocos da mesma cor para estourá-los e cumpra a meta da fase
