@@ -44,7 +44,7 @@ antes de acabarem as jogadas.
   nenhuma é escrita no código.
 - **Dificuldade medida, não chutada**: [`tools/balance.gd`](tools/balance.gd) joga cada
   fase centenas de vezes com um jogador "guloso" e um aleatório e mostra a taxa de vitória.
-  A curva cai de 100% para cerca de 40% em "dente de serra", aliviando a cada cor nova e após cada portão.
+  A curva cai de 100% para cerca de 30% em "dente de serra", aliviando a cada cor nova e após cada portão.
 - **Áudio 100% sintetizado** por [`tools/generate_audio.gd`](tools/generate_audio.gd):
   efeitos (pop, explosão de desenho animado, estrelas…) e duas músicas em loop
   (calma nos menus, animada nas fases), sem samples de terceiros.
