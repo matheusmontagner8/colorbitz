@@ -4,10 +4,11 @@ extends Control
 const StarsView = preload("res://scripts/ui/stars_view.gd")
 
 const BUTTON_SIZE := Vector2(132, 144)
-const LOCK_COLOR := Color(0.5, 0.54, 0.66, 1)
+const LOCK_COLOR := Color(0.3, 0.36, 0.55, 1)
 
 
 func _ready() -> void:
+	Audio.play_music("menu")
 	%BackButton.pressed.connect(GameState.go_to_menu)
 	var levels: Array = GameState.levels
 	var progress = GameState.progress

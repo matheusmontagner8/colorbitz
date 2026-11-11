@@ -23,6 +23,13 @@ func _ready() -> void:
 	levels = LevelLoader.load_levels()
 	progress.load_from(SAVE_PATH)
 	apply_audio_settings()
+	add_child(preload("res://scripts/ui/neon_background.gd").new())
+
+
+## Vibração do celular (se ligada nas opções). Sem efeito no PC.
+func vibrate(duration_ms: int, amplitude: float = -1.0) -> void:
+	if progress.vibration_on:
+		Input.vibrate_handheld(duration_ms, amplitude)
 
 
 func current_level() -> Dictionary:
