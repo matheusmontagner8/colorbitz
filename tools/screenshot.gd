@@ -15,8 +15,10 @@ func _initialize() -> void:
 	await _frames(1)  # deixa o GameState terminar o _ready (que carrega o save real)
 	# Progresso de demonstração (só em memória) para a tela de fases.
 	var demo = Progress.new()
-	for i in 7:
-		demo.record_result(i + 1, [3, 3, 2, 3, 1, 2, 3][i])
+	# 9 fases vencidas, 18 estrelas: a fase 10 (portão de 20) aparece trancada.
+	var demo_stars := [3, 2, 2, 3, 1, 2, 2, 2, 1]
+	for i in demo_stars.size():
+		demo.record_result(i + 1, demo_stars[i])
 	_gs.progress = demo
 
 	await _shot("res://scenes/main_menu.tscn", "res://docs/menu.png")
@@ -55,6 +57,8 @@ func _initialize() -> void:
 	await create_timer(1.2).timeout
 
 	# Tela de resultado (vitória forçada).
+	# Vence a fase 9 com 3 estrelas: 18 - 1 + 3 = 20, o que libera o portão da fase 10.
+	_gs.current_index = 8
 	game._session.status = game.GameSession.Status.WON
 	game._session.moves_left = game._session.max_moves
 	game._session.score = 1240

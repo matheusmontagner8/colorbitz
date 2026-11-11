@@ -25,7 +25,8 @@ antes de acabarem as jogadas.
 - Cada fase tem uma meta (pontuação ou "estourar X blocos de uma cor") e um limite de jogadas.
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
-  Cada vitória libera a fase seguinte (30 fases).
+  Cada vitória libera a fase seguinte (60 fases). As fases 10, 20, 30, 40, 50 e 60 são
+  **portões**: só abrem com um mínimo de estrelas somadas nas fases anteriores (20, 42, 64, 86, 108 e 130).
 - As cores entram aos poucos (3 → 6): azul, roxo, verde, rosa, amarelo e vermelho.
   Cada cor tem também um ícone próprio (○ □ △ ◇ ☆ ✚), para que quem tem daltonismo jogue sem problema.
 
@@ -34,11 +35,12 @@ antes de acabarem as jogadas.
 - **Lógica separada da interface**: [`scripts/board.gd`](scripts/board.gd) e
   [`scripts/game_session.gd`](scripts/game_session.gd) são classes puras (sem nós
   de cena), então dá para testá-las isoladamente.
-- **Fases em dados**: todas as fases ficam em [`data/levels.json`](data/levels.json),
+- **Fases em dados**: todas as fases ficam em [`data/levels.json`](data/levels.json)
+  (geradas a partir da tabela legível em [`tools/levels.sh`](tools/levels.sh)),
   nenhuma é escrita no código.
 - **Dificuldade medida, não chutada**: [`tools/balance.gd`](tools/balance.gd) joga cada
   fase centenas de vezes com um jogador "guloso" e um aleatório e mostra a taxa de vitória.
-  A curva cai de 100% para cerca de 50% em "dente de serra", aliviando a cada cor nova.
+  A curva cai de 100% para cerca de 40% em "dente de serra", aliviando a cada cor nova e após cada portão.
 - **Áudio 100% sintetizado** por [`tools/generate_audio.gd`](tools/generate_audio.gd):
   efeitos (pop, explosão de desenho animado, estrelas…) e duas músicas em loop
   (calma nos menus, animada nas fases), sem samples de terceiros.
