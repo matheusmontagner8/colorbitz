@@ -9,7 +9,8 @@ antes de acabarem as jogadas.
 <p align="center">
   <img src="docs/menu.png" width="200" alt="Menu principal">
   <img src="docs/levels.png" width="200" alt="Seleção de fases">
-  <img src="docs/effects.png" width="200" alt="Combinação grande com partículas">
+  <img src="docs/bomb.png" width="200" alt="Bomba criada após um grupo grande">
+  <img src="docs/effects.png" width="200" alt="Explosão da bomba">
   <img src="docs/result.png" width="200" alt="Resultado da fase">
 </p>
 
@@ -23,6 +24,9 @@ antes de acabarem as jogadas.
 - Pontos por jogada: `n × n × 10`, em que `n` é o tamanho do grupo. Grupos maiores valem bem mais,
   e combinações de 6, 9 e 13+ blocos rendem "Ótimo!", "Incrível!" e "Fantástico!".
 - Cada fase tem uma meta (pontuação ou "estourar X blocos de uma cor") e um limite de jogadas.
+- **Bomba**: estourar um grupo grande (8 blocos nas fases de 3–4 cores, 7 com 5 cores e 6 com 6 cores)
+  transforma o bloco tocado numa bomba. Tocar nela gasta uma jogada e explode os blocos em volta
+  (área 3×3, 50 pontos por bloco, contam para a meta de cor). Bombas atingidas explodem em cadeia.
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
   Cada vitória libera a fase seguinte (60 fases). As fases 10, 20, 30, 40, 50 e 60 são
