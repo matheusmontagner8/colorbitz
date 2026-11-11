@@ -16,6 +16,8 @@ var progress = Progress.new()
 var current_index := 0
 ## Ferramentas (ex.: tools/screenshot.gd) desligam para não mexer no save real.
 var save_enabled := true
+## A dica "toque na bomba" aparece até o jogador usar a primeira bomba.
+var bomb_tip_seen := false
 
 
 func _ready() -> void:

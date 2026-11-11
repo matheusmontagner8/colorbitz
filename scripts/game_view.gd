@@ -20,6 +20,8 @@ const HINT_DELAY := 6.0
 const COMBO_GOOD := 6
 const COMBO_GREAT := 9
 const COMBO_AMAZING := 13
+const TUTORIAL_TEXT := "Toque em 2 ou mais blocos iguais\nencostados para estourá-los!"
+const BOMB_TIP_TEXT := "Você ganhou uma bomba! Toque nela\npara explodir os blocos em volta."
 
 var _session  # game_session.gd
 var _blocks := {}  # Vector2i -> BlockView
@@ -39,6 +41,7 @@ var _goal_chip: Control
 var _score_label: Label
 var _moves_label: Label
 var _tutorial_label: Label
+var _tip_tween: Tween
 var _hint_timer: Timer
 var _pause_overlay: Control
 var _result_overlay: Control
@@ -125,12 +128,25 @@ func _build_ui() -> void:
 	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stage.add_child(_fx_layer)
 
-	_tutorial_label = _make_label(self, 30, Color(1, 1, 1, 0.85))
-	_tutorial_label.text = "Toque em 2 ou mais blocos iguais\nencostados para estourá-los!"
-	_tutorial_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_tutorial_label.offset_top = -110
-	_tutorial_label.offset_bottom = -20
+	# Balão de dica (tutorial e bomba), com fundo para ficar legível sobre o tabuleiro.
+	_tutorial_label = _make_label(self, 30, Color.WHITE)
+	_tutorial_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE)
+	_tutorial_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_tutorial_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_tutorial_label.offset_bottom = -24
 	_tutorial_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tip_style := StyleBoxFlat.new()
+	tip_style.bg_color = Color(0.02, 0.03, 0.1, 0.92)
+	tip_style.border_color = Color(NEON_CYAN, 0.8)
+	tip_style.set_border_width_all(2)
+	tip_style.set_corner_radius_all(20)
+	tip_style.shadow_color = Color(NEON_CYAN, 0.3)
+	tip_style.shadow_size = 12
+	tip_style.content_margin_left = 22
+	tip_style.content_margin_right = 22
+	tip_style.content_margin_top = 12
+	tip_style.content_margin_bottom = 12
+	_tutorial_label.add_theme_stylebox_override("normal", tip_style)
 
 	_hint_timer = Timer.new()
 	_hint_timer.wait_time = HINT_DELAY
@@ -219,12 +235,27 @@ func _start_level() -> void:
 	_generation += 1
 	_busy = false
 	get_tree().paused = false
+	_session = LevelLoader.build_session(GameState.current_level())
+	_rebuild_blocks()
+	_pause_overlay.visible = false
+	_result_overlay.visible = false
+	_pause_button.disabled = false
+	if GameState.current_index == 0:
+		_show_tip(TUTORIAL_TEXT)
+	else:
+		_tutorial_label.visible = false
+	_layout()
+	_update_hud()
+	_hint_timer.start()
+
+
+## Recria os nós visuais a partir do estado atual do tabuleiro.
+func _rebuild_blocks() -> void:
 	# Remove blocos e efeitos, inclusive os que estavam no meio de uma animação.
 	for child in _board_root.get_children() + _fx_layer.get_children():
 		child.queue_free()
 	_blocks.clear()
 	_stage.position = Vector2.ZERO
-	_session = LevelLoader.build_session(GameState.current_level())
 	var board = _session.board
 	for y in board.height:
 		for x in board.width:
@@ -235,14 +266,7 @@ func _start_level() -> void:
 			block.color_index = c
 			_board_root.add_child(block)
 			_blocks[Vector2i(x, y)] = block
-	_pause_overlay.visible = false
-	_result_overlay.visible = false
-	_pause_button.disabled = false
-	_tutorial_label.visible = GameState.current_index == 0
-	_tutorial_label.modulate.a = 1.0
 	_layout()
-	_update_hud()
-	_hint_timer.start()
 
 
 func _restart() -> void:
@@ -321,8 +345,8 @@ func _on_board_input(event: InputEvent) -> void:
 	if result.is_empty():
 		_nudge(cell)
 		return
-	if _tutorial_label.visible:
-		create_tween().tween_property(_tutorial_label, "modulate:a", 0.0, 0.5)
+	if _tutorial_label.text == TUTORIAL_TEXT:
+		_hide_tip()
 	_animate(result)
 
 
@@ -387,28 +411,108 @@ func _animate(result: Dictionary) -> void:
 # --- Efeitos ------------------------------------------------------------------
 
 func _play_effects(result: Dictionary) -> void:
-	var n: int = result.removed.size()
+	var n: int = int(result.size)
+	var is_explosion: bool = int(result.color) == BlockView.BOMB
 	var col := BlockView.color_of(int(result.color))
-	Audio.play_sfx("pop", 0.9 + minf(n, 15) * 0.04)
 
+	# Partículas na cor de cada bloco (numa explosão as cores são variadas).
 	var center := Vector2.ZERO
+	var count := 0
 	for p in result.removed:
+		var block = _blocks.get(p)
 		var pos := _cell_center(p)
 		center += pos
-		_burst(pos, col, n >= COMBO_GREAT)
-	center /= n
+		count += 1
+		_burst(pos, BlockView.color_of(block.color_index) if block else col, is_explosion or n >= COMBO_GREAT)
+	if result.bomb != null:
+		center += _cell_center(result.bomb)
+		count += 1
+	center /= maxi(count, 1)
 	_float_text("+%d" % int(result.points), center, col, 40 + mini(n, 15) * 3)
 
+	if is_explosion:
+		Audio.play_sfx("boom")
+		for b in result.exploded:
+			_shockwave(_cell_center(b))
+		_shake(18.0)
+		GameState.vibrate(160)
+		_combo_text("BUM!" if result.exploded.size() == 1 else "BUM x%d!" % result.exploded.size(), col)
+		GameState.bomb_tip_seen = true
+		if _tutorial_label.text == BOMB_TIP_TEXT:
+			_hide_tip()
+		return
+
+	Audio.play_sfx("pop", 0.9 + minf(n, 15) * 0.04)
 	if n >= COMBO_GREAT:
 		Audio.play_sfx("boom")
 		_shake(16.0 if n >= COMBO_AMAZING else 11.0)
 		GameState.vibrate(140 if n >= COMBO_AMAZING else 90)
 		_combo_text("Fantástico!" if n >= COMBO_AMAZING else "Incrível!", col)
+	elif result.bomb != null:
+		_shake(7.0)
+		GameState.vibrate(60)
+		_combo_text("Bomba!", BlockView.BOMB_COLOR)
 	elif n >= COMBO_GOOD:
 		Audio.play_sfx("combo")
 		_shake(5.0)
 		GameState.vibrate(35)
 		_combo_text("Ótimo!", col)
+	if result.bomb != null:
+		_make_bomb(result.bomb)
+
+
+## O bloco tocado se transforma em bomba (ele não está em "removed").
+func _make_bomb(p: Vector2i) -> void:
+	var block: Control = _blocks.get(p)
+	if block == null:
+		return
+	block.color_index = BlockView.BOMB
+	block.scale = Vector2.ONE * 0.4
+	var t := create_tween()
+	t.tween_property(block, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	Audio.play_sfx("powerup")
+	_burst(_cell_center(p), BlockView.BOMB_COLOR, false)
+	if not GameState.bomb_tip_seen:
+		_show_tip(BOMB_TIP_TEXT)
+
+
+## Onda de choque: anel neon que se expande a partir da bomba.
+func _shockwave(pos: Vector2) -> void:
+	var ring := Control.new()
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ring.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var state := {"r": 0.0, "a": 1.0}
+	ring.draw.connect(func():
+		ring.draw_arc(pos, state.r, 0.0, TAU, 48, Color(BlockView.BOMB_COLOR, state.a), 3.0 + 9.0 * state.a, true))
+	_fx_layer.add_child(ring)
+	var t := create_tween()
+	t.tween_method(func(v: float):
+		state.r = v * _cell * 2.2
+		state.a = 1.0 - v
+		ring.queue_redraw(), 0.0, 1.0, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	t.tween_callback(ring.queue_free)
+
+
+func _show_tip(text: String) -> void:
+	if _tip_tween:
+		_tip_tween.kill()
+	_tutorial_label.text = text
+	_tutorial_label.visible = true
+	_tutorial_label.modulate.a = 1.0
+	# Centraliza o balão na parte de baixo da tela, do tamanho do texto.
+	var s := _tutorial_label.get_combined_minimum_size()
+	_tutorial_label.offset_left = -s.x / 2.0
+	_tutorial_label.offset_right = s.x / 2.0
+	_tutorial_label.offset_bottom = -24.0
+	_tutorial_label.offset_top = -24.0 - s.y
+
+
+func _hide_tip() -> void:
+	if not _tutorial_label.visible or _tutorial_label.modulate.a < 1.0:
+		return
+	_tip_tween = create_tween()
+	_tip_tween.tween_property(_tutorial_label, "modulate:a", 0.0, 0.5)
+	_tip_tween.tween_callback(func(): _tutorial_label.visible = false)
 
 
 ## Explosão de partículas brilhantes na cor do bloco.
@@ -483,7 +587,9 @@ func _apply_shake(strength: float) -> void:
 func _show_hint() -> void:
 	if _busy or _session.status != GameSession.Status.PLAYING:
 		return
-	for p in _session.board.best_group():
+	var bombs: Array = _session.board.bombs()
+	var targets: Array = [bombs[0]] if not bombs.is_empty() else _session.board.best_group()
+	for p in targets:
 		var block: Control = _blocks.get(p)
 		if block == null:
 			continue
