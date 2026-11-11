@@ -1,20 +1,18 @@
-## Cena de jogo (Semana 1): mostra o tabuleiro, recebe toques e anima.
+## Tela de jogo: tabuleiro, HUD, pausa e resultado.
 ## Toda a regra do jogo fica em board.gd / game_session.gd; aqui é só interface.
 extends Control
 
 const GameSession = preload("res://scripts/game_session.gd")
 const LevelLoader = preload("res://scripts/level_loader.gd")
 const BlockView = preload("res://scripts/block_view.gd")
+const StarsView = preload("res://scripts/ui/stars_view.gd")
 
-const BG_COLOR := Color("#1e2233")
 const BOARD_BG := Color("#2a2f45")
-const HUD_HEIGHT := 200.0
+const HUD_HEIGHT := 230.0
 const MARGIN := 16.0
 const POP_TIME := 0.15
 const FALL_TIME := 0.22
 
-var _levels: Array = []
-var _level_index := 0
 var _session  # game_session.gd
 var _blocks := {}  # Vector2i -> BlockView
 var _cell := 64.0
@@ -24,37 +22,46 @@ var _generation := 0
 
 var _board_root: Control
 var _board_bg: Panel
+var _pause_button: Button
 var _level_label: Label
 var _goal_label: Label
 var _score_label: Label
 var _moves_label: Label
-var _overlay: Control
-var _result_label: Label
+var _pause_overlay: Control
+var _result_overlay: Control
+var _result_title: Label
+var _result_stars: StarsView
+var _result_score: Label
 var _next_button: Button
 
 
 func _ready() -> void:
-	_levels = LevelLoader.load_levels()
 	_build_ui()
 	resized.connect(_layout)
-	_start_level(0)
+	_start_level()
 
+
+# --- Construção da interface -------------------------------------------------
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = BG_COLOR
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
+	_pause_button = Button.new()
+	_pause_button.text = "II"
+	_pause_button.position = Vector2(MARGIN, MARGIN * 2)
+	_pause_button.size = Vector2(88, 88)
+	_pause_button.pressed.connect(_pause)
+	add_child(_pause_button)
 
 	var hud := VBoxContainer.new()
 	hud.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	hud.offset_left = MARGIN
 	hud.offset_right = -MARGIN
 	hud.offset_top = MARGIN * 2
-	hud.add_theme_constant_override("separation", 4)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_theme_constant_override("separation", 6)
 	add_child(hud)
-	_level_label = _make_label(hud, 30, Color("#9aa3c7"))
+	_level_label = _make_label(hud, 40, Color("#9aa3c7"))
+	_level_label.custom_minimum_size.y = 88
+	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_goal_label = _make_label(hud, 38, Color.WHITE)
 	var row := HBoxContainer.new()
 	hud.add_child(row)
@@ -64,6 +71,7 @@ func _build_ui() -> void:
 	_moves_label = _make_label(row, 34, Color("#F0E442"))
 	_moves_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_moves_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	move_child(_pause_button, -1)  # botão acima do HUD para receber o toque
 
 	_board_bg = Panel.new()
 	var sb := StyleBoxFlat.new()
@@ -74,27 +82,53 @@ func _build_ui() -> void:
 	add_child(_board_bg)
 
 	_board_root = Control.new()
-	_board_root.clip_contents = false
 	_board_root.gui_input.connect(_on_board_input)
 	add_child(_board_root)
 
-	_build_overlay()
+	_build_pause_overlay()
+	_build_result_overlay()
 
 
-func _build_overlay() -> void:
-	_overlay = ColorRect.new()
-	(_overlay as ColorRect).color = Color(0, 0, 0, 0.7)
-	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(_overlay)
+func _make_overlay() -> Array:
+	var overlay := ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.72)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.process_mode = Node.PROCESS_MODE_ALWAYS  # funciona com o jogo pausado
+	overlay.visible = false
+	add_child(overlay)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_overlay.add_child(center)
+	overlay.add_child(center)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 24)
 	center.add_child(box)
-	_result_label = _make_label(box, 52, Color.WHITE)
-	_next_button = _make_button(box, "Próxima fase", func(): _start_level(_level_index + 1))
-	_make_button(box, "Jogar de novo", func(): _start_level(_level_index))
+	return [overlay, box]
+
+
+func _build_pause_overlay() -> void:
+	var parts := _make_overlay()
+	_pause_overlay = parts[0]
+	var box: VBoxContainer = parts[1]
+	_make_label(box, 64, Color.WHITE).text = "Pausado"
+	_make_spacer(box, 16)
+	_make_button(box, "Continuar", _resume)
+	_make_button(box, "Reiniciar fase", _restart)
+	_make_button(box, "Menu", GameState.go_to_menu)
+
+
+func _build_result_overlay() -> void:
+	var parts := _make_overlay()
+	_result_overlay = parts[0]
+	var box: VBoxContainer = parts[1]
+	_result_title = _make_label(box, 64, Color.WHITE)
+	_result_stars = StarsView.new()
+	_result_stars.custom_minimum_size = Vector2(360, 110)
+	box.add_child(_result_stars)
+	_result_score = _make_label(box, 36, Color("#9aa3c7"))
+	_make_spacer(box, 16)
+	_next_button = _make_button(box, "Próxima fase", func(): GameState.play_level(GameState.current_index + 1))
+	_make_button(box, "Tentar de novo", _restart)
+	_make_button(box, "Fases", GameState.go_to_level_select)
 
 
 func _make_label(parent: Node, font_size: int, color: Color) -> Label:
@@ -109,21 +143,29 @@ func _make_label(parent: Node, font_size: int, color: Color) -> Label:
 func _make_button(parent: Node, text: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(380, 96)
-	b.add_theme_font_size_override("font_size", 36)
+	b.custom_minimum_size = Vector2(420, 104)
 	b.pressed.connect(on_pressed)
 	parent.add_child(b)
 	return b
 
 
-func _start_level(index: int) -> void:
+func _make_spacer(parent: Node, height: float) -> void:
+	var s := Control.new()
+	s.custom_minimum_size = Vector2(0, height)
+	parent.add_child(s)
+
+
+# --- Ciclo da fase ------------------------------------------------------------
+
+func _start_level() -> void:
 	_generation += 1
 	_busy = false
-	_level_index = clampi(index, 0, _levels.size() - 1)
-	for b in _blocks.values():
-		b.queue_free()
+	get_tree().paused = false
+	# Remove todos os blocos, inclusive os que estavam no meio de uma animação.
+	for child in _board_root.get_children():
+		child.queue_free()
 	_blocks.clear()
-	_session = LevelLoader.build_session(_levels[_level_index])
+	_session = LevelLoader.build_session(GameState.current_level())
 	var board = _session.board
 	for y in board.height:
 		for x in board.width:
@@ -134,10 +176,44 @@ func _start_level(index: int) -> void:
 			block.color_index = c
 			_board_root.add_child(block)
 			_blocks[Vector2i(x, y)] = block
-	_overlay.visible = false
+	_pause_overlay.visible = false
+	_result_overlay.visible = false
+	_pause_button.disabled = false
 	_layout()
 	_update_hud()
 
+
+func _restart() -> void:
+	_start_level()
+
+
+func _pause() -> void:
+	if _result_overlay.visible:
+		return
+	get_tree().paused = true
+	_pause_overlay.visible = true
+
+
+func _resume() -> void:
+	_pause_overlay.visible = false
+	get_tree().paused = false
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_WM_GO_BACK_REQUEST:  # botão "voltar" do Android
+			if _result_overlay.visible:
+				GameState.go_to_level_select()
+			elif _pause_overlay.visible:
+				_resume()
+			else:
+				_pause()
+		NOTIFICATION_APPLICATION_PAUSED:  # app foi para segundo plano
+			if is_node_ready() and not _pause_overlay.visible:
+				_pause()
+
+
+# --- Layout e entrada ---------------------------------------------------------
 
 func _layout() -> void:
 	if _session == null:
@@ -203,10 +279,10 @@ func _animate(result: Dictionary) -> void:
 		removed.append(block)
 		pop.tween_property(block, "scale", Vector2.ZERO, POP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	await pop.finished
-	for block in removed:
-		block.queue_free()
 	if gen != _generation:
 		return
+	for block in removed:
+		block.queue_free()
 
 	if not result.moves.is_empty():
 		var moved := {}
@@ -228,11 +304,13 @@ func _animate(result: Dictionary) -> void:
 	_busy = false
 	_layout()
 	if _session.status != GameSession.Status.PLAYING:
-		_show_result()
+		_finish()
 
+
+# --- HUD e resultado ----------------------------------------------------------
 
 func _update_hud() -> void:
-	_level_label.text = "Fase %d" % (_level_index + 1)
+	_level_label.text = "Fase %d" % (GameState.current_index + 1)
 	if _session.goal_type() == "color":
 		var color_name: String = BlockView.COLOR_NAMES[int(_session.goal.get("color", 0)) % BlockView.COLOR_NAMES.size()]
 		_goal_label.text = "Meta: %d / %d blocos %s" % [mini(_session.goal_progress(), _session.goal_target()), _session.goal_target(), color_name]
@@ -242,12 +320,19 @@ func _update_hud() -> void:
 	_moves_label.text = "Jogadas: %d" % _session.moves_left
 
 
-func _show_result() -> void:
+func _finish() -> void:
 	var won: bool = _session.status == GameSession.Status.WON
+	var stars: int = _session.stars()
 	if won:
-		var s: int = _session.stars()
-		_result_label.text = "Vitória!\nEstrelas: %d de 3" % s
+		GameState.complete_current_level(stars)
+		_result_title.text = "Vitória!"
 	else:
-		_result_label.text = "Fim de jogo"
-	_next_button.visible = won and _level_index + 1 < _levels.size()
-	_overlay.visible = true
+		_result_title.text = "Não foi dessa vez"
+	_result_stars.count = stars
+	_result_stars.visible = won
+	_result_score.text = "Pontos: %d" % _session.score
+	_next_button.visible = won and GameState.has_next_level()
+	_pause_button.disabled = true
+	_result_overlay.modulate.a = 0.0
+	_result_overlay.visible = true
+	create_tween().tween_property(_result_overlay, "modulate:a", 1.0, 0.25)
