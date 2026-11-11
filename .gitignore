@@ -1,0 +1,17 @@
+# Cache e arquivos gerados pelo Godot 4
+.godot/
+/android/
+
+# Builds exportados
+/build/
+*.apk
+*.aab
+
+# Chaves de assinatura (NUNCA versionar)
+*.keystore
+*.jks
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.tmp
