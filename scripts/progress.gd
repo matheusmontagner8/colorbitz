@@ -8,6 +8,7 @@ const SAVE_VERSION := 1
 var stars: Dictionary = {}
 var sound_on := true
 var music_on := true
+var vibration_on := true
 
 
 ## Normaliza o id da fase: o JSON devolve números como float (1.0) e
@@ -52,7 +53,7 @@ func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"stars": stars.duplicate(),
-		"settings": {"sound": sound_on, "music": music_on},
+		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on},
 	}
 
 
@@ -66,6 +67,7 @@ func from_dict(data: Dictionary) -> void:
 	if typeof(settings) == TYPE_DICTIONARY:
 		sound_on = bool(settings.get("sound", true))
 		music_on = bool(settings.get("music", true))
+		vibration_on = bool(settings.get("vibration", true))
 
 
 ## Grava primeiro em um arquivo temporário e depois troca, para não

@@ -54,6 +54,7 @@ func test_save_and_load_roundtrip() -> void:
 	p.record_result(1, 3)
 	p.record_result(2, 1)
 	p.music_on = false
+	p.vibration_on = false
 	assert_eq(p.save_to(TEST_PATH), OK)
 	assert_false(FileAccess.file_exists(TEST_PATH + ".tmp"), "temporário removido")
 
@@ -63,6 +64,7 @@ func test_save_and_load_roundtrip() -> void:
 	assert_eq(loaded.stars_for(2), 1)
 	assert_true(loaded.sound_on)
 	assert_false(loaded.music_on)
+	assert_false(loaded.vibration_on)
 	assert_true(loaded.is_unlocked(2, LEVELS))
 
 	assert_eq(p.save_to(TEST_PATH), OK, "sobrescrever save existente")
