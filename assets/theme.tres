@@ -120,6 +120,63 @@ shadow_color = Color(1, 0.3098, 0.8471, 0.7)
 shadow_size = 26
 anti_aliasing = true
 
+[sub_resource type="StyleBoxFlat" id="gate_normal"]
+content_margin_left = 24.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 12.0
+bg_color = Color(0.1608, 0.1412, 0.0392, 0.92)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.898, 0.2392, 1)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+shadow_color = Color(1, 0.898, 0.2392, 0.4)
+shadow_size = 16
+anti_aliasing = true
+
+[sub_resource type="StyleBoxFlat" id="gate_pressed"]
+content_margin_left = 24.0
+content_margin_top = 14.0
+content_margin_right = 24.0
+content_margin_bottom = 10.0
+bg_color = Color(1, 0.898, 0.2392, 0.3)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.96, 0.7, 1)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+shadow_color = Color(1, 0.898, 0.2392, 0.7)
+shadow_size = 22
+anti_aliasing = true
+
+[sub_resource type="StyleBoxFlat" id="gate_disabled"]
+content_margin_left = 24.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 12.0
+bg_color = Color(0.0784, 0.0706, 0.0392, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.898, 0.2392, 0.4)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+shadow_color = Color(1, 0.898, 0.2392, 0.12)
+shadow_size = 10
+anti_aliasing = true
+
 [sub_resource type="StyleBoxEmpty" id="btn_focus"]
 
 [resource]
@@ -130,6 +187,11 @@ AccentButton/font_sizes/font_size = 56
 AccentButton/styles/hover = SubResource("accent_normal")
 AccentButton/styles/normal = SubResource("accent_normal")
 AccentButton/styles/pressed = SubResource("accent_pressed")
+GateButton/base_type = &"Button"
+GateButton/styles/disabled = SubResource("gate_disabled")
+GateButton/styles/hover = SubResource("gate_normal")
+GateButton/styles/normal = SubResource("gate_normal")
+GateButton/styles/pressed = SubResource("gate_pressed")
 Button/colors/font_color = Color(1, 1, 1, 1)
 Button/colors/font_disabled_color = Color(0.3, 0.36, 0.55, 1)
 Button/colors/font_focus_color = Color(1, 1, 1, 1)

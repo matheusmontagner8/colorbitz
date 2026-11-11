@@ -46,6 +46,7 @@ var _result_title: Label
 var _result_stars: StarsView
 var _result_score: Label
 var _next_button: Button
+var _gate_label: Label
 
 
 func _ready() -> void:
@@ -178,6 +179,9 @@ func _build_result_overlay() -> void:
 	_result_stars.custom_minimum_size = Vector2(380, 120)
 	box.add_child(_result_stars)
 	_result_score = _make_label(box, 38, Color(1, 1, 1, 0.75))
+	_gate_label = _make_label(box, 30, Color("#FFE53D"))
+	_gate_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_gate_label.custom_minimum_size.x = 520
 	_make_spacer(box, 16)
 	_next_button = _make_button(box, "Próxima fase", func(): GameState.play_level(GameState.current_index + 1))
 	_next_button.theme_type_variation = &"AccentButton"
@@ -524,7 +528,10 @@ func _finish() -> void:
 	_result_stars.count = 0
 	_result_stars.visible = won
 	_result_score.text = "Pontos: %d" % _session.score
-	_next_button.visible = won and GameState.has_next_level()
+	var next := GameState.current_index + 1
+	var has_next: bool = won and GameState.has_next_level()
+	_next_button.visible = has_next and GameState.is_unlocked(next)
+	_update_gate_label(next, has_next)
 	_pause_button.disabled = true
 	_result_overlay.modulate.a = 0.0
 	_result_overlay.visible = true
@@ -536,3 +543,18 @@ func _finish() -> void:
 		t.tween_callback(func():
 			_result_stars.count = i + 1
 			Audio.play_sfx("star", 1.0 + i * 0.12))
+
+
+## Se a próxima fase é um portão de estrelas, avisa se foi liberada ou quantas faltam.
+func _update_gate_label(next: int, has_next: bool) -> void:
+	var required: int = GameState.stars_required(next) if has_next else 0
+	_gate_label.visible = required > 0
+	if required == 0:
+		return
+	var missing: int = GameState.missing_stars(next)
+	if missing == 0:
+		_gate_label.text = "Fase %d liberada!" % (next + 1)
+		_gate_label.add_theme_color_override("font_color", Color("#2BFF88"))
+	else:
+		_gate_label.text = "A fase %d exige %d estrelas. Faltam %d: jogue de novo as fases anteriores para conseguir mais estrelas." % [next + 1, required, missing]
+		_gate_label.add_theme_color_override("font_color", Color("#FFE53D"))
