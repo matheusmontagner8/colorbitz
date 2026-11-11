@@ -26,7 +26,7 @@ antes de acabarem as jogadas.
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
   Cada vitória libera a fase seguinte (60 fases). As fases 10, 20, 30, 40, 50 e 60 são
-  **portões**: só abrem com um mínimo de estrelas somadas nas fases anteriores (20, 42, 64, 86, 108 e 130).
+  **portões**: só abrem com um mínimo de estrelas somadas nas fases anteriores (22, 46, 70, 94, 118 e 142, ou seja, 80% do máximo possível).
 - As cores entram aos poucos (3 → 6): azul, roxo, verde, rosa, amarelo e vermelho.
   Cada cor tem também um ícone próprio (○ □ △ ◇ ☆ ✚), para que quem tem daltonismo jogue sem problema.
 

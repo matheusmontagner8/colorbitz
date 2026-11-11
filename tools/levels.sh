@@ -1,7 +1,7 @@
 #!/bin/sh
 # Gera data/levels.json. Edite a tabela e rode: sh tools/levels.sh
 # Colunas: id cores jogadas meta(s=pontos|c=cor) valor [cor] ; portão = estrelas exigidas (opcional, via GATE_<id>)
-GATE_10=20; GATE_20=42; GATE_30=64; GATE_40=86; GATE_50=108; GATE_60=130
+GATE_10=22; GATE_20=46; GATE_30=70; GATE_40=94; GATE_50=118; GATE_60=142
 out=data/levels.json
 first=1
 emit() { # id cores jogadas tipo a [b]
