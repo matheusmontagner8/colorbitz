@@ -39,8 +39,9 @@ func tap(x: int, y: int) -> Dictionary:
 		return result
 	moves_left -= 1
 	score += int(result.points)
-	var color := int(result.color)
-	removed_by_color[color] = int(removed_by_color.get(color, 0)) + result.removed.size()
+	var colors: Dictionary = result.removed_colors
+	for color in colors:
+		removed_by_color[int(color)] = int(removed_by_color.get(int(color), 0)) + int(colors[color])
 	_update_status()
 	result["status"] = status
 	return result

@@ -149,6 +149,101 @@ func test_all_groups_and_best_group() -> void:
 	assert_eq(_board(["01", "10"]).best_group(), [])
 
 
+func test_group_of_8_leaves_bomb_where_tapped() -> void:
+	var b := _board([
+		"1111",
+		"1111",
+		"2323",
+	])
+	var r := b.tap(1, 1)
+	assert_eq(r.size, 8)
+	assert_eq(r.points, 640, "pontos contam o grupo inteiro")
+	assert_eq(r.bomb, Vector2i(1, 1))
+	assert_eq(r.removed.size(), 7, "o bloco tocado não some: vira bomba")
+	assert_eq(r.removed_colors, {1: 8})
+	assert_eq(b.to_rows(), [
+		"....",
+		".B..",
+		"2323",
+	], "a bomba fica onde o bloco foi tocado e cai com a gravidade")
+
+
+func test_bomb_falls_with_gravity() -> void:
+	var b := _board([
+		"11112",
+		"11112",
+		"23232",
+	])
+	b.tap(0, 0)
+	assert_eq(b.to_rows(), [
+		"....2",
+		"B...2",
+		"23232",
+	])
+
+
+func test_group_of_7_does_not_make_bomb() -> void:
+	var b := _board(["1111", "1112"])
+	var r := b.tap(0, 0)
+	assert_eq(r.bomb, null)
+	assert_eq(b.count_color(Board.BOMB), 0)
+
+
+func test_bomb_destroys_3x3_area() -> void:
+	var b := _board([
+		"01234",
+		"12B40",
+		"23401",
+		"34012",
+	])
+	var r := b.tap(2, 1)
+	assert_eq(r.color, Board.BOMB)
+	assert_eq(r.size, 8, "8 blocos coloridos em volta")
+	assert_eq(r.points, 8 * Board.BOMB_POINTS_PER_BLOCK)
+	assert_eq(r.removed.size(), 9, "8 blocos + a própria bomba")
+	assert_eq(r.removed_colors, {0: 1, 1: 1, 2: 2, 3: 2, 4: 2})
+	assert_eq(r.exploded, [Vector2i(2, 1)])
+	assert_eq(b.to_rows(), [
+		"0...4",
+		"1...0",
+		"2...1",
+		"34012",
+	], "colunas 0 e 4 intactas; nas do meio, só a linha de baixo sobra")
+
+
+func test_bomb_at_corner_only_hits_inside_board() -> void:
+	var b := _board(["B1", "23"])
+	var r := b.tap(0, 0)
+	assert_eq(r.size, 3)
+	assert_eq(b.count_blocks(), 0)
+
+
+func test_bomb_chain_reaction() -> void:
+	var rows := [
+		"B1111",
+		"2B222",
+		"33333",
+	]
+	var b := _board(rows)
+	var r := b.tap(0, 0)
+	assert_eq(r.exploded.size(), 2, "a primeira bomba detona a segunda (na diagonal)")
+	assert_eq(b.to_rows(), ["11...", "22...", "33..."], "a segunda alcança as colunas 0 a 2")
+	assert_eq(r.removed_colors, {1: 2, 2: 2, 3: 3})
+	b = _board(rows)
+	b.set_cell(1, 1, 2)  # sem a segunda bomba, a área é só 2x2
+	b.tap(0, 0)
+	assert_eq(b.count_blocks(), 11)
+
+
+func test_bombs_count_as_moves_but_not_as_groups() -> void:
+	var b := _board(["B1", "23"])
+	assert_true(b.has_moves(), "uma bomba sempre pode ser tocada")
+	assert_eq(b.all_groups(), [])
+	var two := _board(["BB", "12"])
+	assert_eq(two.all_groups(), [], "duas bombas juntas não formam grupo")
+	assert_eq(two.bombs(), [Vector2i(0, 0), Vector2i(1, 0)])
+
+
 func test_points_for() -> void:
 	assert_eq(Board.points_for(2), 40)
 	assert_eq(Board.points_for(5), 250)

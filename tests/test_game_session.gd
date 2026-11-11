@@ -45,6 +45,27 @@ func test_win_by_color_goal() -> void:
 	assert_eq(s.status, GameSession.Status.WON)
 
 
+func test_bomb_spends_move_and_counts_for_color_goal() -> void:
+	var s := _session([
+		"0123",
+		"1B21",
+		"3210",
+	], 5, {"type": "color", "color": 2, "count": 3})
+	s.tap(1, 1)
+	assert_eq(s.moves_left, 4, "usar a bomba gasta uma jogada")
+	assert_eq(s.goal_progress(), 3, "blocos destruídos pela bomba contam para a meta de cor")
+	assert_eq(s.status, GameSession.Status.WON)
+
+
+func test_game_not_lost_while_bomb_available() -> void:
+	var s := _session(["11111111", "23232323"], 10, {"type": "score", "target": 99999})
+	s.tap(0, 0)  # grupo de 8 vira bomba; restam blocos sem grupo
+	assert_eq(s.status, GameSession.Status.PLAYING, "ainda dá para usar a bomba")
+	assert_eq(s.board.to_rows(), ["B.......", "23232323"])
+	s.tap(0, 0)
+	assert_eq(s.status, GameSession.Status.LOST, "sem bomba e sem grupos")
+
+
 func test_color_goal_from_json_floats() -> void:
 	var s := _session(["11", "22"], 5, {"type": "color", "color": 2.0, "count": 2.0})
 	s.tap(0, 1)
