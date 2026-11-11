@@ -1,4 +1,4 @@
-## Tela de jogo: tabuleiro, HUD, pausa e resultado.
+## Tela de jogo: tabuleiro, HUD, efeitos, pausa e resultado.
 ## Toda a regra do jogo fica em board.gd / game_session.gd; aqui é só interface.
 extends Control
 
@@ -6,12 +6,20 @@ const GameSession = preload("res://scripts/game_session.gd")
 const LevelLoader = preload("res://scripts/level_loader.gd")
 const BlockView = preload("res://scripts/block_view.gd")
 const StarsView = preload("res://scripts/ui/stars_view.gd")
+const Fx = preload("res://scripts/fx.gd")
 
-const BOARD_BG := Color("#2a2f45")
+const NEON_CYAN := Color("#3DE0FF")
+const MOVES_COLOR := Color("#FFE53D")
+const DANGER_COLOR := Color("#FF3B3B")
 const HUD_HEIGHT := 230.0
 const MARGIN := 16.0
 const POP_TIME := 0.15
 const FALL_TIME := 0.22
+const HINT_DELAY := 6.0
+## Tamanhos de grupo que disparam os efeitos de combinação.
+const COMBO_GOOD := 6
+const COMBO_GREAT := 9
+const COMBO_AMAZING := 13
 
 var _session  # game_session.gd
 var _blocks := {}  # Vector2i -> BlockView
@@ -20,13 +28,18 @@ var _busy := false
 ## Incrementado a cada (re)início; animações antigas param ao perceber a mudança.
 var _generation := 0
 
+var _stage: Control  # tabuleiro + efeitos (é ele que treme)
 var _board_root: Control
 var _board_bg: Panel
+var _fx_layer: Control
 var _pause_button: Button
 var _level_label: Label
 var _goal_label: Label
+var _goal_chip: Control
 var _score_label: Label
 var _moves_label: Label
+var _tutorial_label: Label
+var _hint_timer: Timer
 var _pause_overlay: Control
 var _result_overlay: Control
 var _result_title: Label
@@ -36,6 +49,7 @@ var _next_button: Button
 
 
 func _ready() -> void:
+	Audio.play_music("level")
 	_build_ui()
 	resized.connect(_layout)
 	_start_level()
@@ -44,13 +58,6 @@ func _ready() -> void:
 # --- Construção da interface -------------------------------------------------
 
 func _build_ui() -> void:
-	_pause_button = Button.new()
-	_pause_button.text = "II"
-	_pause_button.position = Vector2(MARGIN, MARGIN * 2)
-	_pause_button.size = Vector2(88, 88)
-	_pause_button.pressed.connect(_pause)
-	add_child(_pause_button)
-
 	var hud := VBoxContainer.new()
 	hud.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	hud.offset_left = MARGIN
@@ -59,31 +66,75 @@ func _build_ui() -> void:
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_theme_constant_override("separation", 6)
 	add_child(hud)
-	_level_label = _make_label(hud, 40, Color("#9aa3c7"))
+	_level_label = _make_label(hud, 44, NEON_CYAN)
 	_level_label.custom_minimum_size.y = 88
 	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_goal_label = _make_label(hud, 38, Color.WHITE)
+	Fx.glow_label(_level_label, NEON_CYAN, 14)
+
+	var goal_row := HBoxContainer.new()
+	goal_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	goal_row.add_theme_constant_override("separation", 12)
+	hud.add_child(goal_row)
+	_goal_label = _make_label(goal_row, 38, Color.WHITE)
+	_goal_chip = BlockView.new()
+	_goal_chip.custom_minimum_size = Vector2(52, 52)
+	_goal_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	goal_row.add_child(_goal_chip)
+
 	var row := HBoxContainer.new()
 	hud.add_child(row)
-	_score_label = _make_label(row, 34, Color.WHITE)
+	_score_label = _make_label(row, 36, Color.WHITE)
 	_score_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_moves_label = _make_label(row, 34, Color("#F0E442"))
+	_moves_label = _make_label(row, 36, MOVES_COLOR)
 	_moves_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_moves_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	move_child(_pause_button, -1)  # botão acima do HUD para receber o toque
+
+	_pause_button = Button.new()
+	_pause_button.text = "II"
+	_pause_button.position = Vector2(MARGIN, MARGIN * 2)
+	_pause_button.size = Vector2(88, 88)
+	_pause_button.pressed.connect(_pause)
+	add_child(_pause_button)
+
+	_stage = Control.new()
+	_stage.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_stage)
 
 	_board_bg = Panel.new()
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = BOARD_BG
-	sb.set_corner_radius_all(18)
+	sb.bg_color = Color(0.03, 0.05, 0.15, 0.85)
+	sb.border_color = Color(NEON_CYAN, 0.35)
+	sb.set_border_width_all(2)
+	sb.shadow_color = Color(NEON_CYAN, 0.12)
+	sb.shadow_size = 24
+	sb.set_corner_radius_all(22)
+	sb.anti_aliasing = true
 	_board_bg.add_theme_stylebox_override("panel", sb)
 	_board_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_board_bg)
+	_stage.add_child(_board_bg)
 
 	_board_root = Control.new()
 	_board_root.gui_input.connect(_on_board_input)
-	add_child(_board_root)
+	_stage.add_child(_board_root)
+
+	_fx_layer = Control.new()
+	_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stage.add_child(_fx_layer)
+
+	_tutorial_label = _make_label(self, 30, Color(1, 1, 1, 0.85))
+	_tutorial_label.text = "Toque em 2 ou mais blocos iguais\nencostados para estourá-los!"
+	_tutorial_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_tutorial_label.offset_top = -110
+	_tutorial_label.offset_bottom = -20
+	_tutorial_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	_hint_timer = Timer.new()
+	_hint_timer.wait_time = HINT_DELAY
+	_hint_timer.timeout.connect(_show_hint)
+	add_child(_hint_timer)
 
 	_build_pause_overlay()
 	_build_result_overlay()
@@ -91,7 +142,7 @@ func _build_ui() -> void:
 
 func _make_overlay() -> Array:
 	var overlay := ColorRect.new()
-	overlay.color = Color(0, 0, 0, 0.72)
+	overlay.color = Color(0.01, 0.015, 0.06, 0.86)
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.process_mode = Node.PROCESS_MODE_ALWAYS  # funciona com o jogo pausado
 	overlay.visible = false
@@ -100,7 +151,7 @@ func _make_overlay() -> Array:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.add_child(center)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 24)
+	box.add_theme_constant_override("separation", 26)
 	center.add_child(box)
 	return [overlay, box]
 
@@ -109,9 +160,11 @@ func _build_pause_overlay() -> void:
 	var parts := _make_overlay()
 	_pause_overlay = parts[0]
 	var box: VBoxContainer = parts[1]
-	_make_label(box, 64, Color.WHITE).text = "Pausado"
+	var title := _make_label(box, 68, NEON_CYAN)
+	title.text = "Pausado"
+	Fx.glow_label(title, NEON_CYAN, 18)
 	_make_spacer(box, 16)
-	_make_button(box, "Continuar", _resume)
+	_make_button(box, "Continuar", _resume).theme_type_variation = &"AccentButton"
 	_make_button(box, "Reiniciar fase", _restart)
 	_make_button(box, "Menu", GameState.go_to_menu)
 
@@ -120,13 +173,14 @@ func _build_result_overlay() -> void:
 	var parts := _make_overlay()
 	_result_overlay = parts[0]
 	var box: VBoxContainer = parts[1]
-	_result_title = _make_label(box, 64, Color.WHITE)
+	_result_title = _make_label(box, 72, Color.WHITE)
 	_result_stars = StarsView.new()
-	_result_stars.custom_minimum_size = Vector2(360, 110)
+	_result_stars.custom_minimum_size = Vector2(380, 120)
 	box.add_child(_result_stars)
-	_result_score = _make_label(box, 36, Color("#9aa3c7"))
+	_result_score = _make_label(box, 38, Color(1, 1, 1, 0.75))
 	_make_spacer(box, 16)
 	_next_button = _make_button(box, "Próxima fase", func(): GameState.play_level(GameState.current_index + 1))
+	_next_button.theme_type_variation = &"AccentButton"
 	_make_button(box, "Tentar de novo", _restart)
 	_make_button(box, "Fases", GameState.go_to_level_select)
 
@@ -143,7 +197,7 @@ func _make_label(parent: Node, font_size: int, color: Color) -> Label:
 func _make_button(parent: Node, text: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(420, 104)
+	b.custom_minimum_size = Vector2(440, 108)
 	b.pressed.connect(on_pressed)
 	parent.add_child(b)
 	return b
@@ -161,10 +215,11 @@ func _start_level() -> void:
 	_generation += 1
 	_busy = false
 	get_tree().paused = false
-	# Remove todos os blocos, inclusive os que estavam no meio de uma animação.
-	for child in _board_root.get_children():
+	# Remove blocos e efeitos, inclusive os que estavam no meio de uma animação.
+	for child in _board_root.get_children() + _fx_layer.get_children():
 		child.queue_free()
 	_blocks.clear()
+	_stage.position = Vector2.ZERO
 	_session = LevelLoader.build_session(GameState.current_level())
 	var board = _session.board
 	for y in board.height:
@@ -179,8 +234,11 @@ func _start_level() -> void:
 	_pause_overlay.visible = false
 	_result_overlay.visible = false
 	_pause_button.disabled = false
+	_tutorial_label.visible = GameState.current_index == 0
+	_tutorial_label.modulate.a = 1.0
 	_layout()
 	_update_hud()
+	_hint_timer.start()
 
 
 func _restart() -> void:
@@ -224,8 +282,8 @@ func _layout() -> void:
 	var board_size := Vector2(board.width, board.height) * _cell
 	_board_root.size = board_size
 	_board_root.position = Vector2((size.x - board_size.x) / 2.0, HUD_HEIGHT + (avail.y - board_size.y) / 2.0 + MARGIN)
-	_board_bg.position = _board_root.position - Vector2(8, 8)
-	_board_bg.size = board_size + Vector2(16, 16)
+	_board_bg.position = _board_root.position - Vector2(10, 10)
+	_board_bg.size = board_size + Vector2(20, 20)
 	if not _busy:
 		for p in _blocks:
 			_place(_blocks[p], p)
@@ -234,11 +292,17 @@ func _layout() -> void:
 func _place(block: Control, p: Vector2i) -> void:
 	block.size = Vector2(_cell, _cell)
 	block.pivot_offset = block.size / 2.0
+	block.scale = Vector2.ONE
 	block.position = _cell_pos(p)
 
 
 func _cell_pos(p: Vector2i) -> Vector2:
 	return Vector2(p) * _cell
+
+
+## Centro de uma célula nas coordenadas do _fx_layer.
+func _cell_center(p: Vector2i) -> Vector2:
+	return _board_root.position + _cell_pos(p) + Vector2(_cell, _cell) / 2.0
 
 
 func _on_board_input(event: InputEvent) -> void:
@@ -247,11 +311,14 @@ func _on_board_input(event: InputEvent) -> void:
 		return
 	if _busy or _session.status != GameSession.Status.PLAYING:
 		return
+	_hint_timer.start()  # reinicia a contagem da dica
 	var cell := Vector2i((mb.position / _cell).floor())
 	var result: Dictionary = _session.tap(cell.x, cell.y)
 	if result.is_empty():
 		_nudge(cell)
 		return
+	if _tutorial_label.visible:
+		create_tween().tween_property(_tutorial_label, "modulate:a", 0.0, 0.5)
 	_animate(result)
 
 
@@ -260,6 +327,7 @@ func _nudge(cell: Vector2i) -> void:
 	var block: Control = _blocks.get(cell)
 	if block == null:
 		return
+	Audio.play_sfx("thud")
 	var t := create_tween()
 	t.tween_property(block, "rotation", 0.15, 0.05)
 	t.tween_property(block, "rotation", -0.15, 0.08)
@@ -270,14 +338,19 @@ func _animate(result: Dictionary) -> void:
 	_busy = true
 	var gen := _generation
 	_update_hud()
+	_play_effects(result)
 
 	var removed: Array[Control] = []
-	var pop := create_tween().set_parallel(true)
 	for p in result.removed:
-		var block: Control = _blocks[p]
+		removed.append(_blocks[p])
 		_blocks.erase(p)
-		removed.append(block)
-		pop.tween_property(block, "scale", Vector2.ZERO, POP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	# Fase 1: todos incham juntos; fase 2: todos somem juntos.
+	var pop := create_tween().set_parallel(true)
+	for block in removed:
+		pop.tween_property(block, "scale", Vector2.ONE * 1.25, POP_TIME * 0.4)
+	pop.chain()
+	for block in removed:
+		pop.tween_property(block, "scale", Vector2.ZERO, POP_TIME * 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 	await pop.finished
 	if gen != _generation:
 		return
@@ -296,7 +369,7 @@ func _animate(result: Dictionary) -> void:
 		var fall := create_tween().set_parallel(true)
 		for to in moved:
 			fall.tween_property(moved[to], "position", _cell_pos(to), FALL_TIME) \
-				.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+				.set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 		await fall.finished
 		if gen != _generation:
 			return
@@ -307,32 +380,159 @@ func _animate(result: Dictionary) -> void:
 		_finish()
 
 
+# --- Efeitos ------------------------------------------------------------------
+
+func _play_effects(result: Dictionary) -> void:
+	var n: int = result.removed.size()
+	var col := BlockView.color_of(int(result.color))
+	Audio.play_sfx("pop", 0.9 + minf(n, 15) * 0.04)
+
+	var center := Vector2.ZERO
+	for p in result.removed:
+		var pos := _cell_center(p)
+		center += pos
+		_burst(pos, col, n >= COMBO_GREAT)
+	center /= n
+	_float_text("+%d" % int(result.points), center, col, 40 + mini(n, 15) * 3)
+
+	if n >= COMBO_GREAT:
+		Audio.play_sfx("boom")
+		_shake(16.0 if n >= COMBO_AMAZING else 11.0)
+		GameState.vibrate(140 if n >= COMBO_AMAZING else 90)
+		_combo_text("Fantástico!" if n >= COMBO_AMAZING else "Incrível!", col)
+	elif n >= COMBO_GOOD:
+		Audio.play_sfx("combo")
+		_shake(5.0)
+		GameState.vibrate(35)
+		_combo_text("Ótimo!", col)
+
+
+## Explosão de partículas brilhantes na cor do bloco.
+func _burst(pos: Vector2, col: Color, big: bool) -> void:
+	var p := CPUParticles2D.new()
+	p.position = pos
+	p.one_shot = true
+	p.explosiveness = 0.95
+	p.amount = 14 if big else 9
+	p.lifetime = 0.75
+	p.texture = Fx.dot_texture()
+	p.material = Fx.additive_material()
+	p.direction = Vector2.UP
+	p.spread = 180.0
+	p.initial_velocity_min = 140.0
+	p.initial_velocity_max = 420.0 if big else 300.0
+	p.gravity = Vector2(0, 900)
+	p.damping_min = 40.0
+	p.damping_max = 80.0
+	p.scale_amount_min = 0.35
+	p.scale_amount_max = 0.9
+	p.color = col.lightened(0.2)
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
+	p.color_ramp = fade
+	_fx_layer.add_child(p)
+	p.emitting = true
+	get_tree().create_timer(1.0, false).timeout.connect(p.queue_free)
+
+
+## Pontos que sobem e somem.
+func _float_text(text: String, pos: Vector2, col: Color, font_size: int) -> void:
+	var l := _make_label(_fx_layer, font_size, col.lightened(0.5))
+	l.text = text
+	Fx.glow_label(l, col, 14)
+	l.reset_size()
+	l.position = pos - l.size / 2.0
+	var t := create_tween().set_parallel(true)
+	t.tween_property(l, "position:y", l.position.y - 110.0, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	t.tween_property(l, "modulate:a", 0.0, 0.35).set_delay(0.45)
+	t.chain().tween_callback(l.queue_free)
+
+
+## Texto grande de combinação no centro do tabuleiro.
+func _combo_text(text: String, col: Color) -> void:
+	var l := _make_label(_fx_layer, 92, col.lightened(0.55))
+	l.text = text
+	Fx.glow_label(l, col, 28)
+	l.reset_size()
+	l.position = _board_root.position + _board_root.size / 2.0 - l.size / 2.0
+	l.pivot_offset = l.size / 2.0
+	l.scale = Vector2.ONE * 0.3
+	l.rotation = -0.08
+	var t := create_tween()
+	t.tween_property(l, "scale", Vector2.ONE * 1.15, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(l, "scale", Vector2.ONE, 0.12)
+	t.tween_interval(0.45)
+	t.tween_property(l, "modulate:a", 0.0, 0.3)
+	t.tween_callback(l.queue_free)
+
+
+func _shake(strength: float) -> void:
+	create_tween().tween_method(_apply_shake, strength, 0.0, 0.4)
+
+
+func _apply_shake(strength: float) -> void:
+	_stage.position = Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
+
+
+## Se o jogador ficar parado, o maior grupo pisca para mostrar onde tocar.
+func _show_hint() -> void:
+	if _busy or _session.status != GameSession.Status.PLAYING:
+		return
+	for p in _session.board.best_group():
+		var block: Control = _blocks.get(p)
+		if block == null:
+			continue
+		var t := create_tween()
+		for i in 2:
+			t.tween_property(block, "scale", Vector2.ONE * 1.15, 0.2).set_trans(Tween.TRANS_SINE)
+			t.tween_property(block, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_SINE)
+
+
 # --- HUD e resultado ----------------------------------------------------------
 
 func _update_hud() -> void:
 	_level_label.text = "Fase %d" % (GameState.current_index + 1)
-	if _session.goal_type() == "color":
-		var color_name: String = BlockView.COLOR_NAMES[int(_session.goal.get("color", 0)) % BlockView.COLOR_NAMES.size()]
-		_goal_label.text = "Meta: %d / %d blocos %s" % [mini(_session.goal_progress(), _session.goal_target()), _session.goal_target(), color_name]
+	var is_color: bool = _session.goal_type() == "color"
+	_goal_chip.visible = is_color
+	if is_color:
+		_goal_chip.color_index = int(_session.goal.get("color", 0))
+		_goal_label.text = "Meta: %d / %d" % [mini(_session.goal_progress(), _session.goal_target()), _session.goal_target()]
 	else:
 		_goal_label.text = "Meta: %d pontos" % _session.goal_target()
 	_score_label.text = "Pontos: %d" % _session.score
 	_moves_label.text = "Jogadas: %d" % _session.moves_left
+	var danger: bool = _session.moves_left <= 3
+	_moves_label.add_theme_color_override("font_color", DANGER_COLOR if danger else MOVES_COLOR)
+	Fx.glow_label(_moves_label, DANGER_COLOR if danger else MOVES_COLOR, 12 if danger else 6)
 
 
 func _finish() -> void:
+	_hint_timer.stop()
 	var won: bool = _session.status == GameSession.Status.WON
 	var stars: int = _session.stars()
+	var title_color: Color = Color("#2BFF88") if won else Color("#FF4FD8")
 	if won:
 		GameState.complete_current_level(stars)
 		_result_title.text = "Vitória!"
+		Audio.play_sfx("win")
 	else:
 		_result_title.text = "Não foi dessa vez"
-	_result_stars.count = stars
+		Audio.play_sfx("lose")
+	_result_title.add_theme_color_override("font_color", title_color.lightened(0.3))
+	Fx.glow_label(_result_title, title_color, 22)
+	_result_stars.count = 0
 	_result_stars.visible = won
 	_result_score.text = "Pontos: %d" % _session.score
 	_next_button.visible = won and GameState.has_next_level()
 	_pause_button.disabled = true
 	_result_overlay.modulate.a = 0.0
 	_result_overlay.visible = true
-	create_tween().tween_property(_result_overlay, "modulate:a", 1.0, 0.25)
+	var t := create_tween()
+	t.tween_property(_result_overlay, "modulate:a", 1.0, 0.25)
+	# Estrelas aparecem uma a uma, com som.
+	for i in stars:
+		t.tween_interval(0.3)
+		t.tween_callback(func():
+			_result_stars.count = i + 1
+			Audio.play_sfx("star", 1.0 + i * 0.12))
