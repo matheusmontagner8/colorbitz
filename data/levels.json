@@ -1,0 +1,28 @@
+{
+  "levels": [
+    {
+      "id": 1,
+      "width": 7,
+      "height": 9,
+      "colors": 4,
+      "moves": 20,
+      "goal": { "type": "score", "target": 800 }
+    },
+    {
+      "id": 2,
+      "width": 7,
+      "height": 9,
+      "colors": 4,
+      "moves": 18,
+      "goal": { "type": "color", "color": 1, "count": 12 }
+    },
+    {
+      "id": 3,
+      "width": 7,
+      "height": 9,
+      "colors": 5,
+      "moves": 20,
+      "goal": { "type": "score", "target": 700 }
+    }
+  ]
+}
