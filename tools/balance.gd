@@ -2,7 +2,7 @@
 ## com dois jogadores automáticos e mostra a taxa de vitória.
 ##   - guloso: toca sempre o maior grupo (da cor-alvo, se a meta for de cor)
 ##   - aleatório: toca qualquer grupo válido
-## Uso: godot --headless --path . -s tools/balance.gd [-- N_PARTIDAS]
+## Uso: godot --headless --path . -s tools/balance.gd [-- N_PARTIDAS [arquivo.json]]
 extends SceneTree
 
 const LevelLoader = preload("res://scripts/level_loader.gd")
@@ -14,7 +14,7 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		runs = int(args[0])
-	var levels := LevelLoader.load_levels()
+	var levels := LevelLoader.load_levels(args[1] if args.size() > 1 else LevelLoader.LEVELS_PATH)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 12345
 	print("fase cores jog  meta              guloso  estrelas  aleatório  mediana(guloso)")
@@ -45,7 +45,7 @@ func _play(level: Dictionary, rng: RandomNumberGenerator, greedy: bool):
 	var s = LevelLoader.build_session(level, rng)
 	var target_color := int(level.goal.get("color", -1)) if level.goal.type == "color" else -1
 	while s.status == GameSession.Status.PLAYING:
-		var groups := _groups(s.board)
+		var groups: Array = s.board.all_groups()
 		var pick: Array
 		if greedy:
 			pick = groups[0]
@@ -62,19 +62,3 @@ func _value(group: Array, board, target_color: int) -> int:
 	var bonus := 1000 if target_color >= 0 and board.get_cell(group[0].x, group[0].y) == target_color else 0
 	return group.size() + bonus
 
-
-## Lista todos os grupos válidos (2+ blocos) do tabuleiro.
-func _groups(board) -> Array:
-	var seen := {}
-	var groups := []
-	for y in board.height:
-		for x in board.width:
-			var p := Vector2i(x, y)
-			if seen.has(p) or board.get_cell(x, y) < 0:
-				continue
-			var g: Array = board.find_group(x, y)
-			for q in g:
-				seen[q] = true
-			if g.size() >= 2:
-				groups.append(g)
-	return groups

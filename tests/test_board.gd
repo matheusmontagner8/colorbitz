@@ -134,6 +134,21 @@ func test_fill_random_is_deterministic_and_playable() -> void:
 			assert_true(c >= 0 and c < 5, "cor fora do intervalo em %d,%d" % [x, y])
 
 
+func test_all_groups_and_best_group() -> void:
+	var b := _board([
+		"0012",
+		"0332",
+		"4.33",
+	])
+	var sizes := []
+	for g in b.all_groups():
+		sizes.append(g.size())
+	sizes.sort()
+	assert_eq(sizes, [2, 3, 4], "grupos 2 (cor 2), 3 (cor 0) e 4 (cor 3); isolados fora")
+	assert_eq(b.best_group().size(), 4)
+	assert_eq(_board(["01", "10"]).best_group(), [])
+
+
 func test_points_for() -> void:
 	assert_eq(Board.points_for(2), 40)
 	assert_eq(Board.points_for(5), 250)

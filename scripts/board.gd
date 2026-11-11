@@ -144,6 +144,32 @@ func settle() -> Array:
 	return moves
 
 
+## Todos os grupos válidos (2+ blocos) do tabuleiro.
+func all_groups() -> Array:
+	var seen := {}
+	var groups := []
+	for y in height:
+		for x in width:
+			var p := Vector2i(x, y)
+			if seen.has(p) or get_cell(x, y) == EMPTY:
+				continue
+			var g := find_group(x, y)
+			for q in g:
+				seen[q] = true
+			if g.size() >= MIN_GROUP:
+				groups.append(g)
+	return groups
+
+
+## O maior grupo válido (para a dica), ou [] se não houver.
+func best_group() -> Array:
+	var best := []
+	for g in all_groups():
+		if g.size() > best.size():
+			best = g
+	return best
+
+
 ## Existe ao menos um grupo de 2 ou mais blocos?
 func has_moves() -> bool:
 	for y in height:
