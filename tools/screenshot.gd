@@ -46,15 +46,36 @@ func _initialize() -> void:
 	assert(game._board_root.get_child_count() == game._blocks.size(), "blocos órfãos após reiniciar")
 	print("pausa/reinício durante animação: ok")
 
-	# Efeitos de combinação grande (só visual: o tabuleiro não muda).
-	var group: Array = game._session.board.best_group()
-	var fake := []
-	while fake.size() < 13:
-		fake.append_array(group)
-	game._play_effects({"removed": fake.slice(0, 13), "color": game._session.board.get_cell(group[0].x, group[0].y), "points": 1690})
-	await create_timer(0.14).timeout
+	# Bomba: tabuleiro montado com um grupo de 12 azuis (cor 0) no meio.
+	game._session.goal = {"type": "score", "target": 99999}
+	game._session.board.load_rows([
+		"1234512",
+		"2345123",
+		"3451234",
+		"4512345",
+		"5123451",
+		"1200002",
+		"2300003",
+		"3400004",
+		"4512345",
+	])
+	game._rebuild_blocks()
+	game._update_hud()
+	await _frames(3)
+	_tap(game, Vector2i(3, 6))  # grupo de 12: "Incrível!" e o bloco tocado vira bomba
+	await create_timer(1.0).timeout
+	var bombs: Array = game._session.board.bombs()
+	assert(bombs == [Vector2i(3, 7)], "bomba deveria ter caído para (3, 7)")
+	assert(game._blocks[Vector2i(3, 7)].color_index == game.BlockView.BOMB, "visual da bomba")
+	await _save("res://docs/bomb.png")
+	_tap(game, bombs[0])  # explode a área 3x3
+	await create_timer(0.12).timeout
 	await _save("res://docs/effects.png")
 	await create_timer(1.2).timeout
+	assert(not game._busy and game._session.board.bombs().is_empty(), "bomba usada")
+	assert(game._board_root.get_child_count() == game._blocks.size(), "blocos órfãos após a explosão")
+	assert(game._blocks.size() == game._session.board.count_blocks(), "visual e tabuleiro com o mesmo número de blocos")
+	print("bomba criada e explodida: ok")
 
 	# Tela de resultado (vitória forçada).
 	# Vence a fase 9 com 3 estrelas: 18 - 1 + 3 = 20, o que libera o portão da fase 10.
@@ -106,3 +127,11 @@ func _tap_groups(game, n: int) -> int:
 func _frames(n: int) -> void:
 	for i in n:
 		await process_frame
+
+
+func _tap(game, cell: Vector2i) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = (Vector2(cell) + Vector2(0.5, 0.5)) * game._cell
+	game._on_board_input(ev)
