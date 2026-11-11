@@ -7,6 +7,7 @@ extends SceneTree
 
 const LevelLoader = preload("res://scripts/level_loader.gd")
 const GameSession = preload("res://scripts/game_session.gd")
+const Board = preload("res://scripts/board.gd")
 
 
 func _initialize() -> void:
@@ -17,7 +18,7 @@ func _initialize() -> void:
 	var levels := LevelLoader.load_levels(args[1] if args.size() > 1 else LevelLoader.LEVELS_PATH)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 12345
-	print("fase cores jog  meta              guloso  estrelas  aleatório  mediana(guloso)  3★ guloso")
+	print("fase cores jog  meta              guloso  estrelas  aleatório  mediana(guloso)  3★ guloso  bombas/partida")
 	var star_dists := []  # por fase: quantas partidas terminaram com 0, 1, 2 e 3 estrelas
 	for level in levels:
 		var greedy_wins := 0
@@ -26,6 +27,7 @@ func _initialize() -> void:
 		var random_wins := 0
 		var progress: Array[int] = []
 		var dist := [0, 0, 0, 0]
+		_bombs_made = 0
 		for i in runs:
 			var s = _play(level, rng, true)
 			progress.append(s.goal_progress())
@@ -40,10 +42,10 @@ func _initialize() -> void:
 		progress.sort()
 		var goal: Dictionary = level.goal
 		var goal_text := "%d pts" % int(goal.target) if goal.type == "score" else "%d cor %d" % [int(goal.count), int(goal.color)]
-		print("%4d %5d %4d  %-16s %5.0f%%  %8.1f  %8.0f%%  %8d  %8.0f%%" % [
+		print("%4d %5d %4d  %-16s %5.0f%%  %8.1f  %8.0f%%  %8d  %8.0f%%  %8.2f" % [
 			int(level.id), int(level.colors), int(level.moves), goal_text,
 			100.0 * greedy_wins / runs, float(greedy_stars) / max(greedy_wins, 1),
-			100.0 * random_wins / runs, progress[runs / 2], 100.0 * three_stars / runs])
+			100.0 * random_wins / runs, progress[runs / 2], 100.0 * three_stars / runs, float(_bombs_made) / runs])
 		star_dists.append(dist)
 	_print_gates(levels, star_dists, runs)
 	quit()
@@ -72,24 +74,48 @@ func _print_gates(levels: Array, star_dists: Array, runs: int) -> void:
 		print(line)
 
 
+## Bombas criadas pelo jogador guloso (para a coluna "bombas/partida").
+var _bombs_made := 0
+
+
+## Joga uma partida. Opções de toque = grupos válidos + bombas no tabuleiro.
 func _play(level: Dictionary, rng: RandomNumberGenerator, greedy: bool):
 	var s = LevelLoader.build_session(level, rng)
 	var target_color := int(level.goal.get("color", -1)) if level.goal.type == "color" else -1
 	while s.status == GameSession.Status.PLAYING:
-		var groups: Array = s.board.all_groups()
-		var pick: Array
+		var options: Array = []  # posições a tocar
+		for g in s.board.all_groups():
+			options.append(g[0])
+		options.append_array(s.board.bombs())
+		var pick: Vector2i = options[rng.randi_range(0, options.size() - 1)]
 		if greedy:
-			pick = groups[0]
-			for g in groups:
-				if _value(g, s.board, target_color) > _value(pick, s.board, target_color):
-					pick = g
-		else:
-			pick = groups[rng.randi_range(0, groups.size() - 1)]
-		s.tap(pick[0].x, pick[0].y)
+			var best := -1.0
+			for o in options:
+				var v := _value(o, s.board, target_color)
+				if v > best:
+					best = v
+					pick = o
+		var result: Dictionary = s.tap(pick.x, pick.y)
+		if greedy and result.get("bomb") != null:
+			_bombs_made += 1
 	return s
 
 
-func _value(group: Array, board, target_color: int) -> int:
-	var bonus := 1000 if target_color >= 0 and board.get_cell(group[0].x, group[0].y) == target_color else 0
-	return group.size() + bonus
+## Valor de um toque para o guloso: pontos; em meta de cor, prioriza a cor-alvo.
+func _value(p: Vector2i, board, target_color: int) -> float:
+	var points := 0.0
+	var on_target := 0
+	if board.get_cell(p.x, p.y) == Board.BOMB:
+		for q in board.explosion_area(p.x, p.y).cells:
+			var c: int = board.get_cell(q.x, q.y)
+			if c != Board.BOMB:
+				points += Board.BOMB_POINTS_PER_BLOCK
+				on_target += 1 if c == target_color else 0
+	else:
+		var n: int = board.find_group(p.x, p.y).size()
+		points = Board.points_for(n)
+		on_target = n if board.get_cell(p.x, p.y) == target_color else 0
+	if target_color >= 0:
+		return on_target * 100000.0 + points
+	return points
 
