@@ -9,8 +9,8 @@ const EMPTY := -1
 const MIN_GROUP := 2
 ## Bomba (poder especial): valor de célula que não é uma cor.
 const BOMB := 99
-## Grupos deste tamanho ou maiores deixam uma bomba no lugar do bloco tocado.
-const BOMB_GROUP_SIZE := 8
+## Tamanho padrão de grupo que deixa uma bomba (veja [method bomb_size_for_colors]).
+const DEFAULT_BOMB_GROUP_SIZE := 8
 ## Raio da explosão (1 = área 3x3 em volta da bomba).
 const BOMB_RADIUS := 1
 const BOMB_POINTS_PER_BLOCK := 50
@@ -20,6 +20,8 @@ var width: int
 var height: int
 ## Decisão de design (seção 9.1): colunas vazias se fecham para o lado.
 var collapse_columns := true
+## Grupos deste tamanho ou maiores deixam uma bomba no lugar do bloco tocado.
+var bomb_group_size := DEFAULT_BOMB_GROUP_SIZE
 
 var _cells := PackedInt32Array()
 
@@ -101,6 +103,17 @@ func find_group(x: int, y: int) -> Array[Vector2i]:
 	return group
 
 
+## "Grupo grande" depende de quantas cores a fase tem: com mais cores os
+## grupos são menores, então a bomba sai com menos blocos (decisão de design:
+## frequência parecida de bombas no jogo todo).
+static func bomb_size_for_colors(colors: int) -> int:
+	if colors <= 4:
+		return 8
+	if colors == 5:
+		return 7
+	return 6
+
+
 static func points_for(group_size: int) -> int:
 	return group_size * group_size * 10
 
@@ -126,7 +139,7 @@ func tap(x: int, y: int) -> Dictionary:
 	var bomb_at = null
 	var removed: Array[Vector2i] = []
 	for p in group:
-		if group.size() >= BOMB_GROUP_SIZE and p == Vector2i(x, y):
+		if group.size() >= bomb_group_size and p == Vector2i(x, y):
 			set_cell(p.x, p.y, BOMB)  # o bloco tocado vira bomba
 			bomb_at = p
 		else:

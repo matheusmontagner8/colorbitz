@@ -31,6 +31,19 @@ func test_star_gates_are_reachable_and_increasing() -> void:
 		last_required = required
 
 
+func test_bomb_size_depends_on_colors() -> void:
+	var base := {"width": 7, "height": 9, "moves": 10, "seed": 1, "goal": {"type": "score", "target": 100}}
+	var expected := {3: 8, 4: 8, 5: 7, 6: 6}
+	for colors in expected:
+		var level := base.duplicate()
+		level["colors"] = colors
+		assert_eq(LevelLoader.build_session(level).board.bomb_group_size, expected[colors], "%d cores" % colors)
+	var custom := base.duplicate()
+	custom["colors"] = 6
+	custom["bomb_group"] = 10
+	assert_eq(LevelLoader.build_session(custom).board.bomb_group_size, 10, "bomb_group no JSON tem prioridade")
+
+
 func test_ids_are_unique_and_sequential() -> void:
 	var levels := LevelLoader.load_levels()
 	for i in levels.size():

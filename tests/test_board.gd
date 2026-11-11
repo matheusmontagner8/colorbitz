@@ -189,6 +189,12 @@ func test_group_of_7_does_not_make_bomb() -> void:
 	assert_eq(b.count_color(Board.BOMB), 0)
 
 
+func test_bomb_group_size_is_configurable() -> void:
+	var b := _board(["111111", "234523"])
+	b.bomb_group_size = 6
+	assert_true(b.tap(0, 0).bomb != null, "com limite 6, um grupo de 6 vira bomba")
+
+
 func test_bomb_destroys_3x3_area() -> void:
 	var b := _board([
 		"01234",

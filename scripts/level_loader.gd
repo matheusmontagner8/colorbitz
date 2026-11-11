@@ -28,7 +28,10 @@ static func build_session(level: Dictionary, rng: RandomNumberGenerator = null):
 		else:
 			rng.randomize()
 	var board = Board.new(int(level.get("width", 7)), int(level.get("height", 9)))
-	board.fill_random(int(level.get("colors", 4)), rng)
+	var colors := int(level.get("colors", 4))
+	board.fill_random(colors, rng)
+	# "bomb_group" opcional no levels.json; senão, depende do número de cores.
+	board.bomb_group_size = int(level.get("bomb_group", Board.bomb_size_for_colors(colors)))
 	var session = GameSession.new()
 	session.setup(board, int(level.get("moves", 20)), level.get("goal", {"type": "score", "target": 500}))
 	if level.has("stars"):
