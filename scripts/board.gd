@@ -208,6 +208,42 @@ func _explode(x: int, y: int) -> Dictionary:
 	}
 
 
+## Poder "Martelo": destrói um único bloco, sem precisar de grupo.
+## Se o alvo for uma bomba, ela explode. Retorna o mesmo formato de [method tap]
+## ({} se a célula estiver vazia).
+func smash(x: int, y: int) -> Dictionary:
+	var c := get_cell(x, y)
+	if c == EMPTY:
+		return {}
+	if c == BOMB:
+		return _explode(x, y)
+	var p := Vector2i(x, y)
+	set_cell(x, y, EMPTY)
+	var moves := settle()
+	return {
+		"color": c,
+		"size": 1,
+		"removed": [p] as Array[Vector2i],
+		"removed_colors": {c: 1},
+		"points": BOMB_POINTS_PER_BLOCK,
+		"bomb": null,
+		"exploded": [],
+		"moves": moves,
+	}
+
+
+## Poder "Troca": troca dois blocos (quaisquer, inclusive bombas) de lugar.
+## Retorna false se alguma célula estiver vazia, fora do tabuleiro ou se for a mesma.
+func swap(a: Vector2i, b: Vector2i) -> bool:
+	var ca := get_cell(a.x, a.y)
+	var cb := get_cell(b.x, b.y)
+	if a == b or ca == EMPTY or cb == EMPTY:
+		return false
+	set_cell(a.x, a.y, cb)
+	set_cell(b.x, b.y, ca)
+	return true
+
+
 ## Posições de todas as bombas no tabuleiro.
 func bombs() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []

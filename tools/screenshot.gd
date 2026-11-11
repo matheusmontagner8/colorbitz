@@ -77,6 +77,39 @@ func _initialize() -> void:
 	assert(game._blocks.size() == game._session.board.count_blocks(), "visual e tabuleiro com o mesmo número de blocos")
 	print("bomba criada e explodida: ok")
 
+	# Poderes especiais: 18 estrelas de demonstração = 3 iniciais + 1 de cada.
+	assert(_gs.power_count("hammer") == 4 and _gs.power_count("swap") == 4, "saldo inicial dos poderes")
+	var moves: int = game._session.moves_left
+	var blocks_before: int = game._session.board.count_blocks()
+	game._toggle_power("hammer")
+	await _frames(3)
+	await _save("res://docs/powers.png")
+	var b = game._session.board
+	_tap(game, Vector2i(0, b.height - 1))
+	await create_timer(0.9).timeout
+	assert(b.count_blocks() == blocks_before - 1, "martelo destrói um bloco")
+	assert(game._session.moves_left == moves, "martelo não gasta jogada")
+	assert(_gs.power_count("hammer") == 3 and game._power == "", "martelo gasto e modo desligado")
+	# Troca: dois blocos de cores diferentes.
+	var a := Vector2i(0, b.height - 1)
+	var c := Vector2i(b.width - 1, b.height - 1)
+	for x in b.width:
+		if b.get_cell(x, b.height - 1) != b.get_cell(a.x, a.y) and b.get_cell(x, b.height - 1) >= 0:
+			c = Vector2i(x, b.height - 1)
+	var color_a: int = b.get_cell(a.x, a.y)
+	var color_c: int = b.get_cell(c.x, c.y)
+	game._toggle_power("swap")
+	_tap(game, a)
+	await _frames(2)
+	_tap(game, c)
+	await create_timer(0.6).timeout
+	assert(b.get_cell(a.x, a.y) == color_c and b.get_cell(c.x, c.y) == color_a, "troca no tabuleiro")
+	assert(game._session.moves_left == moves and _gs.power_count("swap") == 3, "troca gasta o poder, não a jogada")
+	for p in game._blocks:
+		assert(game._blocks[p].color_index == b.get_cell(p.x, p.y), "visual diferente do tabuleiro em %s" % p)
+	assert(game._board_root.get_child_count() == game._blocks.size(), "blocos órfãos após os poderes")
+	print("martelo e troca: ok")
+
 	# Tela de resultado (vitória forçada).
 	# Vence a fase 9 com 3 estrelas: 18 - 1 + 3 = 20, o que libera o portão da fase 10.
 	_gs.current_index = 8

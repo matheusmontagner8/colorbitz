@@ -10,6 +10,14 @@ var sound_on := true
 var music_on := true
 var vibration_on := true
 
+## Poderes especiais que o jogador usa quando quiser (decisão de design):
+## começa com POWER_START de cada e ganha +1 de cada a cada POWER_STARS_STEP
+## estrelas. Guardamos só quantos foram usados; o saldo é calculado.
+const POWERS := ["hammer", "swap"]
+const POWER_START := 3
+const POWER_STARS_STEP := 15
+var powers_used: Dictionary = {}
+
 
 ## Normaliza o id da fase: o JSON devolve números como float (1.0) e
 ## str(1.0) seria "1.0", diferente de "1".
@@ -72,10 +80,34 @@ func total_stars() -> int:
 	return total
 
 
+## Quantos de cada poder o jogador já ganhou no total (iniciais + estrelas).
+func powers_granted() -> int:
+	return POWER_START + total_stars() / POWER_STARS_STEP
+
+
+## Saldo atual do poder (nunca negativo).
+func power_count(power: String) -> int:
+	return maxi(0, powers_granted() - int(powers_used.get(power, 0)))
+
+
+## Gasta um poder. Retorna false se o saldo for zero.
+func use_power(power: String) -> bool:
+	if power_count(power) <= 0:
+		return false
+	powers_used[power] = int(powers_used.get(power, 0)) + 1
+	return true
+
+
+## Estrelas que faltam para ganhar o próximo poder de cada.
+func stars_to_next_power() -> int:
+	return POWER_STARS_STEP - total_stars() % POWER_STARS_STEP
+
+
 func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"stars": stars.duplicate(),
+		"powers_used": powers_used.duplicate(),
 		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on},
 	}
 
@@ -86,6 +118,12 @@ func from_dict(data: Dictionary) -> void:
 	if typeof(saved_stars) == TYPE_DICTIONARY:
 		for key in saved_stars:
 			stars[str(key)] = clampi(int(saved_stars[key]), 0, 3)
+	powers_used = {}
+	var used = data.get("powers_used", {})
+	if typeof(used) == TYPE_DICTIONARY:
+		for key in used:
+			if str(key) in POWERS:
+				powers_used[str(key)] = maxi(0, int(used[key]))
 	var settings = data.get("settings", {})
 	if typeof(settings) == TYPE_DICTIONARY:
 		sound_on = bool(settings.get("sound", true))

@@ -7,11 +7,14 @@ const LevelLoader = preload("res://scripts/level_loader.gd")
 const BlockView = preload("res://scripts/block_view.gd")
 const StarsView = preload("res://scripts/ui/stars_view.gd")
 const Fx = preload("res://scripts/fx.gd")
+const PowerButton = preload("res://scripts/ui/power_button.gd")
 
 const NEON_CYAN := Color("#3DE0FF")
 const MOVES_COLOR := Color("#FFE53D")
 const DANGER_COLOR := Color("#FF3B3B")
 const HUD_HEIGHT := 230.0
+const POWER_BAR_HEIGHT := 150.0
+const SWAP_TIME := 0.25
 const MARGIN := 16.0
 const POP_TIME := 0.15
 const FALL_TIME := 0.22
@@ -22,6 +25,10 @@ const COMBO_GREAT := 9
 const COMBO_AMAZING := 13
 const TUTORIAL_TEXT := "Toque em 2 ou mais blocos iguais\nencostados para estourá-los!"
 const BOMB_TIP_TEXT := "Você ganhou uma bomba! Toque nela\npara explodir os blocos em volta."
+const POWER_TIPS := {
+	"hammer": "Martelo: toque no bloco\nque quer destruir.",
+	"swap": "Troca: toque em dois blocos\npara trocá-los de lugar.",
+}
 
 var _session  # game_session.gd
 var _blocks := {}  # Vector2i -> BlockView
@@ -50,6 +57,12 @@ var _result_stars: StarsView
 var _result_score: Label
 var _next_button: Button
 var _gate_label: Label
+var _power_label: Label
+var _power_buttons := {}  # "hammer"/"swap" -> PowerButton
+## Poder escolhido esperando o toque no tabuleiro ("" = toque normal).
+var _power := ""
+var _swap_first = null  # Vector2i do primeiro bloco da troca, ou null
+var _select_tween: Tween
 
 
 func _ready() -> void:
@@ -123,6 +136,20 @@ func _build_ui() -> void:
 	_board_root.gui_input.connect(_on_board_input)
 	_stage.add_child(_board_root)
 
+	var bar := HBoxContainer.new()
+	bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	bar.offset_top = -POWER_BAR_HEIGHT
+	bar.offset_bottom = -MARGIN
+	bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	bar.add_theme_constant_override("separation", 36)
+	add_child(bar)
+	for power in ["hammer", "swap"]:
+		var pb := PowerButton.new()
+		pb.power = power
+		pb.pressed.connect(_toggle_power.bind(power))
+		bar.add_child(pb)
+		_power_buttons[power] = pb
+
 	_fx_layer = Control.new()
 	_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -195,6 +222,8 @@ func _build_result_overlay() -> void:
 	_result_stars.custom_minimum_size = Vector2(380, 120)
 	box.add_child(_result_stars)
 	_result_score = _make_label(box, 38, Color(1, 1, 1, 0.75))
+	_power_label = _make_label(box, 30, Color("#2BFF88"))
+	Fx.glow_label(_power_label, Color("#2BFF88"), 10)
 	_gate_label = _make_label(box, 30, Color("#FFE53D"))
 	_gate_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_gate_label.custom_minimum_size.x = 520
@@ -236,6 +265,8 @@ func _start_level() -> void:
 	_busy = false
 	get_tree().paused = false
 	_session = LevelLoader.build_session(GameState.current_level())
+	_power = ""
+	_swap_first = null
 	_rebuild_blocks()
 	_pause_overlay.visible = false
 	_result_overlay.visible = false
@@ -305,7 +336,7 @@ func _layout() -> void:
 	if _session == null:
 		return
 	var board = _session.board
-	var avail := Vector2(size.x - MARGIN * 2, size.y - HUD_HEIGHT - MARGIN * 3)
+	var avail := Vector2(size.x - MARGIN * 2, size.y - HUD_HEIGHT - POWER_BAR_HEIGHT - MARGIN * 2)
 	_cell = floorf(minf(avail.x / board.width, avail.y / board.height))
 	var board_size := Vector2(board.width, board.height) * _cell
 	_board_root.size = board_size
@@ -341,6 +372,12 @@ func _on_board_input(event: InputEvent) -> void:
 		return
 	_hint_timer.start()  # reinicia a contagem da dica
 	var cell := Vector2i((mb.position / _cell).floor())
+	if _power == "hammer":
+		_use_hammer(cell)
+		return
+	if _power == "swap":
+		_pick_swap(cell)
+		return
 	var result: Dictionary = _session.tap(cell.x, cell.y)
 	if result.is_empty():
 		_nudge(cell)
@@ -348,6 +385,95 @@ func _on_board_input(event: InputEvent) -> void:
 	if _tutorial_label.text == TUTORIAL_TEXT:
 		_hide_tip()
 	_animate(result)
+
+
+# --- Poderes especiais ------------------------------------------------------------
+
+## Liga/desliga o modo do poder. O poder só é gasto quando o jogador o usa.
+func _toggle_power(power: String) -> void:
+	if _busy or _session.status != GameSession.Status.PLAYING:
+		return
+	_set_power("" if _power == power else power)
+
+
+func _set_power(power: String) -> void:
+	_clear_swap_selection()
+	_power = power
+	for p in _power_buttons:
+		_power_buttons[p].active = p == power
+	if power != "":
+		_show_tip(POWER_TIPS[power], true)
+	elif _tutorial_label.text in POWER_TIPS.values():
+		_hide_tip()
+
+
+func _use_hammer(cell: Vector2i) -> void:
+	var result: Dictionary = _session.use_hammer(cell.x, cell.y)
+	if result.is_empty():
+		return
+	GameState.use_power("hammer")
+	_set_power("")
+	_animate(result)
+
+
+func _pick_swap(cell: Vector2i) -> void:
+	if not _blocks.has(cell):
+		return
+	if _swap_first == null:
+		_swap_first = cell
+		var block: Control = _blocks[cell]
+		_select_tween = create_tween().set_loops()
+		_select_tween.tween_property(block, "scale", Vector2.ONE * 1.15, 0.3).set_trans(Tween.TRANS_SINE)
+		_select_tween.tween_property(block, "scale", Vector2.ONE * 0.95, 0.3).set_trans(Tween.TRANS_SINE)
+		Audio.play_sfx("click")
+		return
+	var first: Vector2i = _swap_first
+	if cell == first:
+		_clear_swap_selection()
+		return
+	if not _session.use_swap(first, cell):
+		return
+	GameState.use_power("swap")
+	_set_power("")
+	_animate_swap(first, cell)
+
+
+func _clear_swap_selection() -> void:
+	if _select_tween:
+		_select_tween.kill()
+		_select_tween = null
+	if _swap_first != null and _blocks.has(_swap_first):
+		_blocks[_swap_first].scale = Vector2.ONE
+	_swap_first = null
+
+
+func _animate_swap(a: Vector2i, b: Vector2i) -> void:
+	_busy = true
+	var gen := _generation
+	_update_hud()
+	var block_a: Control = _blocks[a]
+	var block_b: Control = _blocks[b]
+	_blocks[a] = block_b
+	_blocks[b] = block_a
+	Audio.play_sfx("powerup")
+	GameState.vibrate(30)
+	var t := create_tween().set_parallel(true)
+	for pair in [[block_a, b], [block_b, a]]:
+		var block: Control = pair[0]
+		block.z_index = 1
+		t.tween_property(block, "position", _cell_pos(pair[1]), SWAP_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN_OUT)
+		t.tween_property(block, "scale", Vector2.ONE, SWAP_TIME)
+	await t.finished
+	if gen != _generation:
+		return
+	block_a.z_index = 0
+	block_b.z_index = 0
+	for p in [a, b]:
+		_burst(_cell_center(p), PowerButton.COLORS.swap, false)
+	_busy = false
+	_layout()
+	if _session.status != GameSession.Status.PLAYING:
+		_finish()
 
 
 ## Pequeno balanço quando o toque não forma grupo (feedback sem gastar jogada).
@@ -442,6 +568,13 @@ func _play_effects(result: Dictionary) -> void:
 			_hide_tip()
 		return
 
+	if result.get("power") == "hammer":
+		Audio.play_sfx("thud")
+		Audio.play_sfx("pop", 0.8)
+		_shockwave(center)
+		_shake(8.0)
+		GameState.vibrate(50)
+		return
 	Audio.play_sfx("pop", 0.9 + minf(n, 15) * 0.04)
 	if n >= COMBO_GREAT:
 		Audio.play_sfx("boom")
@@ -493,7 +626,8 @@ func _shockwave(pos: Vector2) -> void:
 	t.tween_callback(ring.queue_free)
 
 
-func _show_tip(text: String) -> void:
+## [param at_top]: balão sobre o HUD, para não cobrir o tabuleiro (dicas dos poderes).
+func _show_tip(text: String, at_top := false) -> void:
 	if _tip_tween:
 		_tip_tween.kill()
 	_tutorial_label.text = text
@@ -503,8 +637,11 @@ func _show_tip(text: String) -> void:
 	var s := _tutorial_label.get_combined_minimum_size()
 	_tutorial_label.offset_left = -s.x / 2.0
 	_tutorial_label.offset_right = s.x / 2.0
-	_tutorial_label.offset_bottom = -24.0
-	_tutorial_label.offset_top = -24.0 - s.y
+	var bottom := -POWER_BAR_HEIGHT - 8.0
+	if at_top:  # âncora é a base da tela: converte "abaixo do título da fase"
+		bottom = 112.0 + s.y - size.y
+	_tutorial_label.offset_bottom = bottom
+	_tutorial_label.offset_top = bottom - s.y
 
 
 func _hide_tip() -> void:
@@ -585,7 +722,7 @@ func _apply_shake(strength: float) -> void:
 
 ## Se o jogador ficar parado, o maior grupo pisca para mostrar onde tocar.
 func _show_hint() -> void:
-	if _busy or _session.status != GameSession.Status.PLAYING:
+	if _busy or _power != "" or _session.status != GameSession.Status.PLAYING:
 		return
 	var bombs: Array = _session.board.bombs()
 	var targets: Array = [bombs[0]] if not bombs.is_empty() else _session.board.best_group()
@@ -612,6 +749,10 @@ func _update_hud() -> void:
 		_goal_label.text = "Meta: %d pontos" % _session.goal_target()
 	_score_label.text = "Pontos: %d" % _session.score
 	_moves_label.text = "Jogadas: %d" % _session.moves_left
+	for p in _power_buttons:
+		var pb = _power_buttons[p]
+		pb.count = GameState.power_count(p)
+		pb.disabled = pb.count <= 0 or _session.status != GameSession.Status.PLAYING
 	var danger: bool = _session.moves_left <= 3
 	_moves_label.add_theme_color_override("font_color", DANGER_COLOR if danger else MOVES_COLOR)
 	Fx.glow_label(_moves_label, DANGER_COLOR if danger else MOVES_COLOR, 12 if danger else 6)
@@ -622,8 +763,12 @@ func _finish() -> void:
 	var won: bool = _session.status == GameSession.Status.WON
 	var stars: int = _session.stars()
 	var title_color: Color = Color("#2BFF88") if won else Color("#FF4FD8")
+	_set_power("")
+	_power_label.visible = false
 	if won:
-		GameState.complete_current_level(stars)
+		var gained := GameState.complete_current_level(stars)
+		_power_label.visible = gained > 0
+		_power_label.text = "+%d Martelo e +%d Troca!" % [gained, gained]
 		_result_title.text = "Vitória!"
 		Audio.play_sfx("win")
 	else:

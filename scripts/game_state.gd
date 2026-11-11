@@ -57,9 +57,24 @@ func missing_stars(index: int) -> int:
 
 
 ## Registra uma vitória na fase atual e salva.
-func complete_current_level(stars: int) -> void:
+## Retorna quantos poderes de cada tipo o jogador ganhou com as novas estrelas.
+func complete_current_level(stars: int) -> int:
+	var before: int = progress.powers_granted()
 	if progress.record_result(current_level().get("id", current_index + 1), stars):
 		save()
+	return progress.powers_granted() - before
+
+
+func power_count(power: String) -> int:
+	return progress.power_count(power)
+
+
+## Gasta um poder especial e salva na hora (não dá para "devolver" fechando o app).
+func use_power(power: String) -> bool:
+	if not progress.use_power(power):
+		return false
+	save()
+	return true
 
 
 func save() -> void:

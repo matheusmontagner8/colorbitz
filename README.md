@@ -11,6 +11,7 @@ antes de acabarem as jogadas.
   <img src="docs/levels.png" width="200" alt="Seleção de fases">
   <img src="docs/bomb.png" width="200" alt="Bomba criada após um grupo grande">
   <img src="docs/effects.png" width="200" alt="Explosão da bomba">
+  <img src="docs/powers.png" width="200" alt="Poderes Martelo e Troca">
   <img src="docs/result.png" width="200" alt="Resultado da fase">
 </p>
 
@@ -27,6 +28,10 @@ antes de acabarem as jogadas.
 - **Bomba**: estourar um grupo grande (8 blocos nas fases de 3–4 cores, 7 com 5 cores e 6 com 6 cores)
   transforma o bloco tocado numa bomba. Tocar nela gasta uma jogada e explode os blocos em volta
   (área 3×3, 50 pontos por bloco, contam para a meta de cor). Bombas atingidas explodem em cadeia.
+- **Poderes especiais** (usados quando o jogador quiser, sem gastar jogada):
+  - **Martelo**: destrói um bloco à escolha (50 pontos; numa bomba, ela explode).
+  - **Troca**: troca dois blocos quaisquer de lugar.
+  Começa com 3 de cada e ganha +1 de cada a cada 15 estrelas conquistadas. O saldo fica no save.
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
   Cada vitória libera a fase seguinte (60 fases). As fases 10, 20, 30, 40, 50 e 60 são

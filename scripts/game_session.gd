@@ -38,6 +38,29 @@ func tap(x: int, y: int) -> Dictionary:
 	if result.is_empty():
 		return result
 	moves_left -= 1
+	return _apply(result)
+
+
+## Poder "Martelo": destrói um bloco. Não gasta jogada.
+func use_hammer(x: int, y: int) -> Dictionary:
+	if status != Status.PLAYING:
+		return {}
+	var result: Dictionary = board.smash(x, y)
+	if result.is_empty():
+		return result
+	result["power"] = "hammer"
+	return _apply(result)
+
+
+## Poder "Troca": troca dois blocos de lugar. Não gasta jogada.
+func use_swap(a: Vector2i, b: Vector2i) -> bool:
+	if status != Status.PLAYING or not board.swap(a, b):
+		return false
+	_update_status()
+	return true
+
+
+func _apply(result: Dictionary) -> Dictionary:
 	score += int(result.points)
 	var colors: Dictionary = result.removed_colors
 	for color in colors:

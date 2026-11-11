@@ -112,3 +112,24 @@ func test_add_moves_reopens_lost_session() -> void:
 	s.add_moves(5)
 	assert_eq(s.status, GameSession.Status.PLAYING)
 	assert_eq(s.moves_left, 5)
+
+
+func test_hammer_is_free_and_counts_for_goals() -> void:
+	var s := _session(["11", "23"], 5, {"type": "color", "color": 2, "count": 1})
+	var r := s.use_hammer(0, 1)
+	assert_eq(r.power, "hammer")
+	assert_eq(s.moves_left, 5, "poder não gasta jogada")
+	assert_eq(s.score, 50)
+	assert_eq(s.status, GameSession.Status.WON, "bloco destruído conta para a meta de cor")
+	assert_true(s.use_hammer(1, 1).is_empty(), "partida encerrada")
+
+
+func test_swap_is_free_and_can_create_a_group() -> void:
+	var s := _session(["12", "21"], 5, {"type": "score", "target": 9999})
+	assert_eq(s.status, GameSession.Status.LOST, "xadrez: sem jogadas")
+	assert_false(s.use_swap(Vector2i(0, 0), Vector2i(1, 0)), "partida já encerrada")
+	s = _session(["12", "13", "44"], 5, {"type": "score", "target": 9999})
+	assert_true(s.use_swap(Vector2i(1, 0), Vector2i(1, 1)))
+	assert_eq(s.board.to_rows(), ["13", "12", "44"])
+	assert_eq(s.moves_left, 5)
+	assert_false(s.use_swap(Vector2i(0, 0), Vector2i(0, 0)))

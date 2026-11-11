@@ -253,3 +253,37 @@ func test_bombs_count_as_moves_but_not_as_groups() -> void:
 func test_points_for() -> void:
 	assert_eq(Board.points_for(2), 40)
 	assert_eq(Board.points_for(5), 250)
+
+
+func test_smash_removes_single_block_and_applies_gravity() -> void:
+	var b := _board([
+		"2.",
+		"1.",
+		"03",
+	])
+	var r := b.smash(0, 1)
+	assert_eq(r.size, 1)
+	assert_eq(r.removed, [Vector2i(0, 1)])
+	assert_eq(r.removed_colors, {1: 1})
+	assert_eq(r.points, Board.BOMB_POINTS_PER_BLOCK)
+	assert_eq(b.to_rows(), ["..", "2.", "03"], "o bloco de cima cai")
+	assert_true(b.smash(1, 0).is_empty(), "célula vazia não faz nada")
+
+
+func test_smash_on_bomb_explodes_it() -> void:
+	var b := _board(["B1", "23"])
+	var r := b.smash(0, 0)
+	assert_eq(r.color, Board.BOMB)
+	assert_eq(b.count_blocks(), 0)
+
+
+func test_swap_exchanges_two_blocks() -> void:
+	var b := _board(["12.", "B34"])
+	assert_true(b.swap(Vector2i(0, 0), Vector2i(2, 1)))
+	assert_eq(b.to_rows(), ["42.", "B31"])
+	assert_true(b.swap(Vector2i(0, 1), Vector2i(1, 1)), "bombas também trocam")
+	assert_eq(b.to_rows(), ["42.", "3B1"])
+	assert_false(b.swap(Vector2i(0, 0), Vector2i(2, 0)), "não troca com vazio")
+	assert_false(b.swap(Vector2i(1, 0), Vector2i(1, 0)), "nem consigo mesmo")
+	assert_false(b.swap(Vector2i(0, 0), Vector2i(5, 5)), "nem fora do tabuleiro")
+	assert_eq(b.to_rows(), ["42.", "3B1"])
