@@ -22,7 +22,7 @@ var active := false:
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(210, 124)
+	custom_minimum_size = Vector2(200, 124)
 	focus_mode = Control.FOCUS_NONE
 
 

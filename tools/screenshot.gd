@@ -123,7 +123,23 @@ func _initialize() -> void:
 	await _frames(3)
 	assert(game._session.status == game.GameSession.Status.PLAYING, "travado com poderes não perde")
 	assert(game._tutorial_label.text == game.STUCK_TIP and game._tutorial_label.visible, "dica de travado")
+	assert(game._shuffle_button.visible, "botão Embaralhar aparece quando trava")
+	await create_timer(0.5).timeout
 	await _save("res://docs/stuck.png")
+	game._shuffle_button.pressed.emit()  # embaralha sem gastar poder
+	await create_timer(1.0).timeout
+	assert(not game._shuffle_button.visible and not game._session.is_stuck(), "botão embaralhou e sumiu")
+	assert(_gs.power_count("hammer") == 2 and _gs.power_count("swap") == 2, "embaralhar não gasta poder")
+	game._shuffle_button.pressed.emit()  # destravado: o botão não faz nada
+	await _frames(2)
+	assert(not game._busy, "embaralhar só funciona com o tabuleiro travado")
+	# Trava de novo para testar o caminho sem poderes.
+	game._session.board.load_rows([
+		"0123401", "1234012", "2340123", "3401234", "4012340",
+		"0123401", "1234012", "2340123", "3401234",
+	])
+	game._rebuild_blocks()
+	await _frames(2)
 	var saved_used: Dictionary = _gs.progress.powers_used.duplicate()
 	_gs.progress.powers_used = {"hammer": 99, "swap": 99}  # sem poderes: embaralha sozinho
 	game._after_move()

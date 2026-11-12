@@ -25,7 +25,7 @@ const COMBO_GREAT := 9
 const COMBO_AMAZING := 13
 const TUTORIAL_TEXT := "Toque em 2 ou mais blocos iguais\nencostados para estourá-los!"
 const BOMB_TIP_TEXT := "Você ganhou uma bomba! Toque nela\npara explodir os blocos em volta."
-const STUCK_TIP := "Sem jogadas! Use o Martelo\nou a Troca para continuar."
+const STUCK_TIP := "Sem jogadas! Use um poder\nou embaralhe o tabuleiro."
 const GOAL_DONE_COLOR := Color("#2BFF88")
 const POWER_TIPS := {
 	"hammer": "Martelo: toque no bloco\nque quer destruir.",
@@ -72,6 +72,8 @@ var _goal_tween: Tween
 var _shown_score := 0.0
 var _score_tween: Tween
 var _last_move_tween: Tween
+## Só aparece com o tabuleiro travado (e o jogador ainda tendo poderes).
+var _shuffle_button: Button
 
 
 func _ready() -> void:
@@ -167,7 +169,7 @@ func _build_ui() -> void:
 	bar.offset_top = -POWER_BAR_HEIGHT
 	bar.offset_bottom = -MARGIN
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
-	bar.add_theme_constant_override("separation", 36)
+	bar.add_theme_constant_override("separation", 16)
 	add_child(bar)
 	for power in ["hammer", "swap"]:
 		var pb := PowerButton.new()
@@ -175,6 +177,16 @@ func _build_ui() -> void:
 		pb.pressed.connect(_toggle_power.bind(power))
 		bar.add_child(pb)
 		_power_buttons[power] = pb
+	_shuffle_button = Button.new()
+	_shuffle_button.text = "Embaralhar"
+	_shuffle_button.theme_type_variation = &"AccentButton"
+	_shuffle_button.add_theme_font_size_override("font_size", 28)
+	_shuffle_button.custom_minimum_size = Vector2(176, 124)
+	_shuffle_button.focus_mode = Control.FOCUS_NONE
+	_shuffle_button.visible = false
+	_shuffle_button.pressed.connect(_on_shuffle_pressed)
+	bar.add_child(_shuffle_button)
+	bar.move_child(_shuffle_button, 1)  # entre o Martelo e a Troca
 
 	_fx_layer = Control.new()
 	_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -299,6 +311,7 @@ func _start_level() -> void:
 			t.kill()
 	_shown_score = 0.0
 	_goal_bar.value = 0.0
+	_shuffle_button.visible = false
 	_rebuild_blocks()
 	_pause_overlay.visible = false
 	_result_overlay.visible = false
@@ -423,6 +436,7 @@ func _on_board_input(event: InputEvent) -> void:
 ## tabuleiro travado.
 func _after_move() -> void:
 	_busy = false
+	_shuffle_button.visible = false
 	_layout()
 	if _session.status != GameSession.Status.PLAYING:
 		_finish()
@@ -445,14 +459,29 @@ func _handle_stuck() -> void:
 	if has_power:
 		Audio.play_sfx("thud")
 		_show_tip(STUCK_TIP, true)
+		_shuffle_button.visible = true
+		_shuffle_button.pivot_offset = _shuffle_button.custom_minimum_size / 2.0
+		_shuffle_button.scale = Vector2.ONE * 0.3
+		create_tween().tween_property(_shuffle_button, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	else:
 		_shuffle_board()
 
 
+## Botão "Embaralhar": alternativa grátis aos poderes quando o tabuleiro trava.
+func _on_shuffle_pressed() -> void:
+	if _busy or not _session.is_stuck():
+		return
+	_set_power("")
+	_shuffle_board()
+
+
 func _shuffle_board() -> void:
+	_shuffle_button.visible = false
 	if not _session.shuffle(_rng):
 		_finish()  # nem embaralhando dá: fase perdida
 		return
+	if _tutorial_label.text == STUCK_TIP:
+		_hide_tip()
 	_busy = true
 	var gen := _generation
 	_combo_text("Embaralhando!", NEON_CYAN)
@@ -934,6 +963,7 @@ func _finish() -> void:
 	var stars: int = _session.stars()
 	var title_color: Color = Color("#2BFF88") if won else Color("#FF4FD8")
 	_set_power("")
+	_shuffle_button.visible = false
 	_power_label.visible = false
 	_pause_button.disabled = true
 	if won:

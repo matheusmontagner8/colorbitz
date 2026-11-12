@@ -32,8 +32,9 @@ antes de acabarem as jogadas.
   - **Martelo**: destrói um bloco à escolha (50 pontos; numa bomba, ela explode).
   - **Troca**: troca dois blocos quaisquer de lugar.
   Começa com 3 de cada e ganha +1 de cada a cada 21 estrelas conquistadas. O saldo fica no save.
-- **Sem jogadas?** A fase não acaba: com poderes, o jogo pede para usar o Martelo ou a Troca;
-  sem poderes, o tabuleiro é embaralhado de graça.
+- **Sem jogadas?** A fase não acaba: com poderes, o jogador pode usar o Martelo ou a Troca, ou
+  tocar em **Embaralhar** (grátis, só aparece com o tabuleiro travado); sem poderes, o tabuleiro
+  é embaralhado automaticamente.
 - **Bônus de vitória**: cada jogada que sobrou estoura um bloco e vale +100 pontos.
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
