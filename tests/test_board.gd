@@ -467,3 +467,27 @@ func test_swap_carries_ice_and_shuffle_keeps_specials() -> void:
 	assert_eq(s.get_cell(1, 0), Board.STONE)
 	assert_eq(s.get_cell(1, 1), Board.WILD)
 	assert_eq(s.get_cell(3, 2), 9, "congelado fica no lugar")
+
+
+func test_ensure_colors_tops_up_target_colors() -> void:
+	var b := Board.new()
+	b.load_rows(["1122", "1122", "3344", "3340"])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var changed := b.ensure_colors({0: 4, 1: 3}, rng)
+	assert_eq(b.count_color(0), 4)
+	assert_true(b.count_color(1) >= 4, "cor com sobra não perde abaixo do mínimo")
+	assert_eq(changed, 3)
+	assert_eq(b.count_blocks(), 16, "só troca cores, não cria nem remove blocos")
+	assert_true(b.has_moves())
+
+
+func test_ensure_colors_keeps_specials() -> void:
+	var b := Board.new()
+	b.load_rows(["SW11", "G111"])
+	var rng := RandomNumberGenerator.new()
+	b.ensure_colors({2: 2}, rng)
+	assert_eq(b.count_color(2), 2)
+	assert_eq(b.get_cell(0, 0), Board.STONE)
+	assert_eq(b.get_cell(1, 0), Board.WILD)
+	assert_eq(b.get_cell(0, 1), Board.GEM)

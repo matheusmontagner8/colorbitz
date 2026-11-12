@@ -143,6 +143,45 @@ func place_specials(spec: Dictionary, rng: RandomNumberGenerator) -> void:
 		shuffle(rng)
 
 
+## Metas de cor: garante pelo menos minimums[cor] blocos de cada cor pedida
+## (não caem blocos novos, então com menos que isso a fase seria impossível).
+## Troca a cor de blocos comuns da cor que mais sobra, de preferência
+## encostados num bloco da cor pedida (para formar grupo).
+## Retorna quantos blocos mudaram de cor.
+func ensure_colors(minimums: Dictionary, rng: RandomNumberGenerator) -> int:
+	var changed := 0
+	for color in minimums:
+		color = int(color)
+		while count_color(color) < int(minimums[color]):
+			var cells := _donor_cells(color, minimums)
+			if cells.is_empty():
+				break
+			var near := cells.filter(func(p: Vector2i): return DIRS.any(func(d: Vector2i): return get_cell(p.x + d.x, p.y + d.y) == color))
+			var pool: Array = near if not near.is_empty() else cells
+			var p: Vector2i = pool[rng.randi_range(0, pool.size() - 1)]
+			set_cell(p.x, p.y, color)
+			changed += 1
+	if changed > 0 and not has_moves():
+		shuffle(rng)
+	return changed
+
+
+## Blocos (não congelados) da cor que mais sobra acima do próprio mínimo.
+func _donor_cells(color: int, minimums: Dictionary) -> Array:
+	var order := []
+	for c in MAX_COLORS:
+		var spare := count_color(c) - int(minimums.get(c, 0))
+		if c != color and spare > 0:
+			order.append([spare, c])
+	order.sort_custom(func(a, b): return a[0] > b[0])
+	for item in order:
+		var donor: int = item[1]
+		var cells := _cells_where(func(v): return v == donor).filter(func(p: Vector2i): return not is_frozen(p.x, p.y))
+		if not cells.is_empty():
+			return cells
+	return []
+
+
 func in_bounds(x: int, y: int) -> bool:
 	return x >= 0 and x < width and y >= 0 and y < height
 

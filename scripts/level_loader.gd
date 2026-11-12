@@ -14,6 +14,9 @@ const SHAPES := {
 }
 ## Chaves do levels.json com os especiais da fase (veja Board.place_specials).
 const SPECIAL_KEYS := ["gems", "stones", "wilds", "ice", "ice_hits"]
+## Metas de cor: blocos a mais que a meta, garantidos no tabuleiro (para
+## compensar blocos que fiquem isolados).
+const COLOR_GOAL_MARGIN := 2
 
 
 static func load_levels(path: String = LEVELS_PATH) -> Array:
@@ -26,6 +29,20 @@ static func load_levels(path: String = LEVELS_PATH) -> Array:
 		push_error("Formato inválido em %s" % path)
 		return []
 	return data["levels"]
+
+
+## Quantos blocos de cada cor o tabuleiro precisa ter para a meta ser possível:
+## {cor: meta + COLOR_GOAL_MARGIN} nas metas "color" e "colors"; {} nas outras.
+static func color_minimums(goal: Dictionary) -> Dictionary:
+	match String(goal.get("type", "")):
+		"color":
+			return {int(goal.color): int(goal.count) + COLOR_GOAL_MARGIN}
+		"colors":
+			var result := {}
+			for c in goal.targets:
+				result[int(c)] = int(goal.targets[c]) + COLOR_GOAL_MARGIN
+			return result
+	return {}
 
 
 ## Cria a sessão da fase. Se a fase tiver "seed", o tabuleiro é sempre o mesmo.
@@ -50,6 +67,9 @@ static func build_session(level: Dictionary, rng: RandomNumberGenerator = null):
 			spec[key] = int(level[key])
 	if not spec.is_empty():
 		board.place_specials(spec, rng)
+	var minimums := color_minimums(level.get("goal", {}))
+	if not minimums.is_empty():
+		board.ensure_colors(minimums, rng)
 	# "bomb_group" opcional no levels.json; senão, depende do número de cores.
 	board.bomb_group_size = int(level.get("bomb_group", Board.bomb_size_for_colors(colors)))
 	var session = GameSession.new()

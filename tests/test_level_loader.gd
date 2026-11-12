@@ -86,3 +86,23 @@ func test_build_session_with_specials_and_shape() -> void:
 	assert_eq(b.count_color(b.WILD), 1)
 	assert_true(b.has_moves())
 	assert_eq(s.initial_blocks, 63 - 16, "16 buracos na ampulheta")
+
+
+## Não caem blocos novos: o tabuleiro tem que começar com blocos suficientes
+## da(s) cor(es) pedida(s), senão a fase seria impossível.
+func test_color_goals_always_have_enough_blocks() -> void:
+	var levels: Array = LevelLoader.load_levels()
+	for t in preload("res://scripts/daily.gd").TEMPLATES:
+		levels.append(t)
+	var rng := RandomNumberGenerator.new()
+	for level in levels:
+		var minimums := LevelLoader.color_minimums(level.goal)
+		if minimums.is_empty():
+			continue
+		for i in 150:
+			rng.seed = i
+			var s = LevelLoader.build_session(level, rng)
+			for c in minimums:
+				assert_true(s.board.count_color(c) >= minimums[c],
+					"fase %s semente %d: cor %d tem %d de %d" % [level.get("id", level.get("name")), i, c, s.board.count_color(c), minimums[c]])
+			assert_true(s.board.has_moves(), "fase %s semente %d sem jogadas" % [level.get("id", level.get("name")), i])

@@ -68,7 +68,7 @@ done <<'TABLE'
 30 6 11 s 1150
 # Segunda metade: metas duplas (32), formatos (33), limpar (36), gelo grosso (38)
 31 6 15 s 1000
-32 6 14 m 0:5,3:5 | "tip": "Meta dupla: estoure as\nduas cores pedidas."
+32 6 14 m 0:6,3:6 | "tip": "Meta dupla: estoure as\nduas cores pedidas."
 33 6 14 s 850 | "mask": "ampulheta", "tip": "Tabuleiro com formato! Os blocos\natravessam os buracos ao cair."
 34 6 13 s 1100 | "ice": 6, "wilds": 2
 35 6 13 c 3 7
@@ -80,23 +80,23 @@ done <<'TABLE'
 41 6 13 c 4 6
 42 5 19 d 3 | "gems": 3
 43 6 12 s 900 | "mask": "cantos", "stones": 3
-44 6 12 m 2:6,5:6 | "wilds": 2
+44 6 12 m 2:7,5:7 | "wilds": 2
 45 6 11 s 950 | "ice": 8, "ice_hits": 2
 46 6 11 k 31 | "stones": 3
-47 6 11 c 2 6 | "mask": "janela"
+47 6 10 c 2 8 | "mask": "janela"
 48 6 10 s 1150
 49 6 10 s 1200 | "ice": 6, "wilds": 2, "stones": 2
 50 6 13 s 1150
 51 6 12 c 0 7
 52 6 16 d 3 | "gems": 3, "mask": "ampulheta"
 53 6 11 m 1:5,4:5 | "ice": 6, "ice_hits": 2
-54 6 11 c 3 8 | "stones": 4
+54 6 9 c 3 9 | "stones": 4
 55 6 10 s 1150 | "mask": "cantos", "wilds": 2
 56 6 10 k 27 | "mask": "pilares"
 57 6 10 c 4 7 | "ice": 8, "ice_hits": 2
 58 6 9 s 1150 | "stones": 4, "wilds": 2
 59 5 17 d 3 | "gems": 3, "ice": 6
-60 6 12 m 0:5,5:5 | "mask": "janela", "stones": 2, "ice": 6, "ice_hits": 2
+60 6 12 m 0:6,5:6 | "mask": "janela", "stones": 2, "ice": 6, "ice_hits": 2
 TABLE
 printf '\n  ]\n}\n' >> $out
 echo "gerado $out"
