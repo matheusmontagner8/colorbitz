@@ -63,7 +63,7 @@ func test_game_not_lost_while_bomb_available() -> void:
 	assert_eq(s.status, GameSession.Status.PLAYING, "ainda dá para usar a bomba")
 	assert_eq(s.board.to_rows(), ["B.......", "23232323"])
 	s.tap(0, 0)
-	assert_eq(s.status, GameSession.Status.LOST, "sem bomba e sem grupos")
+	assert_true(s.is_stuck(), "sem bomba e sem grupos: travado, mas não perdido")
 
 
 func test_color_goal_from_json_floats() -> void:
@@ -80,12 +80,57 @@ func test_lose_when_out_of_moves() -> void:
 	assert_true(s.tap(2, 1).is_empty(), "sem jogadas após o fim")
 
 
-func test_lose_when_no_groups_left() -> void:
+func test_no_groups_left_is_stuck_not_lost() -> void:
 	var s := _session(["112", "343"], 10, {"type": "score", "target": 1000})
 	s.tap(0, 0)
 	assert_false(s.board.has_moves())
-	assert_eq(s.status, GameSession.Status.LOST)
+	assert_eq(s.status, GameSession.Status.PLAYING, "dá para usar um poder ou embaralhar")
+	assert_true(s.is_stuck())
 	assert_eq(s.moves_left, 9)
+
+
+func test_shuffle_unsticks_board() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var s := _session(["11", "23", "32"], 10, {"type": "score", "target": 1000})
+	s.tap(0, 0)
+	assert_true(s.is_stuck())
+	assert_true(s.shuffle(rng))
+	assert_false(s.is_stuck())
+	assert_eq(s.status, GameSession.Status.PLAYING)
+	assert_eq(s.board.count_color(2), 2, "embaralhar não muda as cores, só a ordem")
+	assert_false(s.shuffle(rng), "só embaralha se estiver travado")
+
+
+func test_shuffle_impossible_loses() -> void:
+	var s := _session(["11", "23"], 10, {"type": "score", "target": 1000})
+	s.tap(0, 0)
+	assert_true(s.is_stuck())
+	assert_false(s.shuffle(RandomNumberGenerator.new()))
+	assert_eq(s.status, GameSession.Status.LOST, "cores 2 e 3 sozinhas: sem saída")
+
+
+func test_hammer_can_unstick_board() -> void:
+	var s := _session(["1121", "3432"], 10, {"type": "score", "target": 1000})
+	s.tap(0, 0)
+	assert_true(s.is_stuck())
+	s.use_hammer(1, 1)  # sem o 4, os dois 3 ficam lado a lado
+	assert_false(s.is_stuck())
+
+
+func test_end_bonus_pops_one_block_per_move_left() -> void:
+	var rng := RandomNumberGenerator.new()
+	var s := _session(["11", "23", "45"], 10, {"type": "score", "target": 40})
+	s.tap(0, 0)
+	assert_eq(s.status, GameSession.Status.WON)
+	var stars := s.stars()
+	var cells := s.play_end_bonus(rng)
+	assert_eq(cells.size(), 4, "9 jogadas sobrando, mas só 4 blocos")
+	assert_eq(s.board.count_blocks(), 0)
+	assert_eq(s.end_bonus, 4 * GameSession.END_BONUS_POINTS)
+	assert_eq(s.score, 40 + s.end_bonus)
+	assert_eq(s.stars(), stars, "bônus não muda as estrelas")
+	assert_eq(s.play_end_bonus(rng), [], "só uma vez")
 
 
 func test_stars_by_moves_left() -> void:
@@ -126,8 +171,9 @@ func test_hammer_is_free_and_counts_for_goals() -> void:
 
 func test_swap_is_free_and_can_create_a_group() -> void:
 	var s := _session(["12", "21"], 5, {"type": "score", "target": 9999})
-	assert_eq(s.status, GameSession.Status.LOST, "xadrez: sem jogadas")
-	assert_false(s.use_swap(Vector2i(0, 0), Vector2i(1, 0)), "partida já encerrada")
+	assert_true(s.is_stuck(), "xadrez: sem jogadas")
+	assert_true(s.use_swap(Vector2i(0, 0), Vector2i(1, 0)), "troca destrava o tabuleiro")
+	assert_false(s.is_stuck())
 	s = _session(["12", "13", "44"], 5, {"type": "score", "target": 9999})
 	assert_true(s.use_swap(Vector2i(1, 0), Vector2i(1, 1)))
 	assert_eq(s.board.to_rows(), ["13", "12", "44"])

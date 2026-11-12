@@ -41,6 +41,14 @@ func _ready() -> void:
 		else:
 			_add_lock_icon(button, 0.0, 1.0)
 	%StarsLabel.text = "Estrelas: %d de %d" % [progress.total_stars(), levels.size() * 3]
+	var powers := Label.new()
+	powers.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	powers.add_theme_font_size_override("font_size", 26)
+	powers.add_theme_color_override("font_color", Color("#3DE0FF"))
+	var next: int = progress.stars_to_next_power()
+	powers.text = "Martelo: %d   Troca: %d\nMais 1 de cada em %d %s" % [
+		progress.power_count("hammer"), progress.power_count("swap"), next, "estrela" if next == 1 else "estrelas"]
+	%StarsLabel.add_sibling(powers)
 	if last_unlocked:
 		# Rola até a fase mais avançada liberada.
 		await get_tree().process_frame

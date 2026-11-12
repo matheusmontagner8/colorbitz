@@ -110,14 +110,46 @@ func _initialize() -> void:
 	assert(game._board_root.get_child_count() == game._blocks.size(), "blocos órfãos após os poderes")
 	print("martelo e troca: ok")
 
-	# Tela de resultado (vitória forçada).
+	# Tabuleiro travado (sem nenhum grupo): cada linha é a de cima deslocada.
+	game._session.board.load_rows([
+		"0123401", "1234012", "2340123", "3401234", "4012340",
+		"0123401", "1234012", "2340123", "3401234",
+	])
+	game._rebuild_blocks()
+	game._update_hud()
+	await _frames(2)
+	assert(game._session.is_stuck(), "tabuleiro de teste deveria estar travado")
+	game._after_move()  # com poderes: a fase continua e pede para usar um
+	await _frames(3)
+	assert(game._session.status == game.GameSession.Status.PLAYING, "travado com poderes não perde")
+	assert(game._tutorial_label.text == game.STUCK_TIP and game._tutorial_label.visible, "dica de travado")
+	await _save("res://docs/stuck.png")
+	var saved_used: Dictionary = _gs.progress.powers_used.duplicate()
+	_gs.progress.powers_used = {"hammer": 99, "swap": 99}  # sem poderes: embaralha sozinho
+	game._after_move()
+	await create_timer(1.0).timeout
+	assert(not game._busy and not game._session.is_stuck(), "embaralhou e destravou")
+	for p in game._blocks:
+		assert(game._blocks[p].color_index == game._session.board.get_cell(p.x, p.y), "visual após embaralhar")
+	_gs.progress.powers_used = saved_used
+	print("tabuleiro travado (poderes e embaralhar): ok")
+
+	# Tela de resultado (vitória forçada), com o bônus das jogadas que sobraram.
 	# Vence a fase 9 com 3 estrelas: 18 - 1 + 3 = 20, o que libera o portão da fase 10.
 	_gs.current_index = 8
 	game._session.status = game.GameSession.Status.WON
 	game._session.moves_left = game._session.max_moves
 	game._session.score = 1240
+	var blocks_left: int = game._session.board.count_blocks()
 	game._finish()
-	await create_timer(1.6).timeout
+	await create_timer(1.3).timeout
+	await _save("res://docs/bonus.png")
+	await create_timer(3.0).timeout
+	var popped: int = mini(game._session.max_moves, blocks_left)
+	assert(game._session.end_bonus == popped * game.GameSession.END_BONUS_POINTS, "bônus = jogadas que sobraram")
+	assert(game._blocks.size() == game._session.board.count_blocks(), "visual e tabuleiro após o bônus")
+	assert(game._result_overlay.visible, "resultado aparece depois do bônus")
+	print("bônus de fim de fase: ok")
 	await _save("res://docs/result.png")
 	print("captura concluída")
 	quit()

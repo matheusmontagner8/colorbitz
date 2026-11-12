@@ -244,6 +244,63 @@ func swap(a: Vector2i, b: Vector2i) -> bool:
 	return true
 
 
+## Embaralha as cores dos blocos (as posições ocupadas não mudam) até existir
+## uma jogada. Retorna false se for impossível (nenhuma cor com 2+ blocos e
+## nenhuma bomba): aí o tabuleiro fica como estava.
+func shuffle(rng: RandomNumberGenerator) -> bool:
+	var cells: Array[Vector2i] = []
+	var values: Array[int] = []
+	var per_color := {}
+	for y in height:
+		for x in width:
+			var c := get_cell(x, y)
+			if c != EMPTY:
+				cells.append(Vector2i(x, y))
+				values.append(c)
+				per_color[c] = int(per_color.get(c, 0)) + 1
+	var pair_color := EMPTY
+	for c in per_color:
+		if c == BOMB or per_color[c] >= MIN_GROUP:
+			pair_color = c
+			break
+	if pair_color == EMPTY:
+		return false
+	for _attempt in 30:
+		_shuffle_values(values, rng)
+		for i in cells.size():
+			set_cell(cells[i].x, cells[i].y, values[i])
+		if has_moves():
+			return true
+	# Sorte ruim: coloca dois blocos da mesma cor em células vizinhas.
+	# (Com bomba nunca chega aqui: bomba já conta como jogada.)
+	for i in cells.size():
+		for d in [Vector2i.RIGHT, Vector2i.DOWN]:
+			var j := cells.find(cells[i] + d)
+			if j < 0:
+				continue
+			_swap_values(values, i, values.find(pair_color))
+			var k := values.find(pair_color)
+			if k == i:
+				k = values.find(pair_color, i + 1)
+			_swap_values(values, j, k)
+			for n in cells.size():
+				set_cell(cells[n].x, cells[n].y, values[n])
+			return has_moves()
+	return false
+
+
+## Fisher-Yates com o rng dado (Array.shuffle usaria o rng global).
+static func _shuffle_values(values: Array[int], rng: RandomNumberGenerator) -> void:
+	for i in range(values.size() - 1, 0, -1):
+		_swap_values(values, i, rng.randi_range(0, i))
+
+
+static func _swap_values(values: Array[int], i: int, j: int) -> void:
+	var tmp := values[i]
+	values[i] = values[j]
+	values[j] = tmp
+
+
 ## Posições de todas as bombas no tabuleiro.
 func bombs() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []

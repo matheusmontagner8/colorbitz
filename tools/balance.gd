@@ -83,6 +83,9 @@ func _play(level: Dictionary, rng: RandomNumberGenerator, greedy: bool):
 	var s = LevelLoader.build_session(level, rng)
 	var target_color := int(level.goal.get("color", -1)) if level.goal.type == "color" else -1
 	while s.status == GameSession.Status.PLAYING:
+		if s.is_stuck():  # jogador sem poderes: o jogo embaralha de graça
+			s.shuffle(rng)
+			continue
 		var options: Array = []  # posições a tocar
 		for g in s.board.all_groups():
 			options.append(g[0])

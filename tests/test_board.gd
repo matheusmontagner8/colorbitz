@@ -287,3 +287,35 @@ func test_swap_exchanges_two_blocks() -> void:
 	assert_false(b.swap(Vector2i(1, 0), Vector2i(1, 0)), "nem consigo mesmo")
 	assert_false(b.swap(Vector2i(0, 0), Vector2i(5, 5)), "nem fora do tabuleiro")
 	assert_eq(b.to_rows(), ["42.", "3B1"])
+
+
+func test_shuffle_keeps_colors_and_creates_a_move() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed in 50:
+		rng.seed = seed
+		var b := _board([
+			"0123.",
+			"1230.",
+			"2301.",
+		])
+		assert_false(b.has_moves())
+		assert_true(b.shuffle(rng), "seed %d" % seed)
+		assert_true(b.has_moves(), "seed %d" % seed)
+		for c in 4:
+			assert_eq(b.count_color(c), 3, "seed %d: cor %d" % [seed, c])
+		assert_eq(b.get_cell(4, 0), Board.EMPTY, "vazios continuam vazios")
+
+
+func test_shuffle_forces_pair_when_luck_fails() -> void:
+	# Só 2 blocos da cor 0 entre 8: o embaralhamento aleatório raramente acerta.
+	var rng := RandomNumberGenerator.new()
+	for seed in 30:
+		rng.seed = seed
+		var b := _board(["01234", "56701"])
+		assert_true(b.shuffle(rng) and b.has_moves(), "seed %d" % seed)
+
+
+func test_shuffle_impossible() -> void:
+	var b := _board(["01", "23"])
+	assert_false(b.shuffle(RandomNumberGenerator.new()))
+	assert_eq(b.to_rows(), ["01", "23"], "nada muda")

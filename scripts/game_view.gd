@@ -12,7 +12,7 @@ const PowerButton = preload("res://scripts/ui/power_button.gd")
 const NEON_CYAN := Color("#3DE0FF")
 const MOVES_COLOR := Color("#FFE53D")
 const DANGER_COLOR := Color("#FF3B3B")
-const HUD_HEIGHT := 230.0
+const HUD_HEIGHT := 252.0
 const POWER_BAR_HEIGHT := 150.0
 const SWAP_TIME := 0.25
 const MARGIN := 16.0
@@ -25,6 +25,8 @@ const COMBO_GREAT := 9
 const COMBO_AMAZING := 13
 const TUTORIAL_TEXT := "Toque em 2 ou mais blocos iguais\nencostados para estourá-los!"
 const BOMB_TIP_TEXT := "Você ganhou uma bomba! Toque nela\npara explodir os blocos em volta."
+const STUCK_TIP := "Sem jogadas! Use o Martelo\nou a Troca para continuar."
+const GOAL_DONE_COLOR := Color("#2BFF88")
 const POWER_TIPS := {
 	"hammer": "Martelo: toque no bloco\nque quer destruir.",
 	"swap": "Troca: toque em dois blocos\npara trocá-los de lugar.",
@@ -63,6 +65,13 @@ var _power_buttons := {}  # "hammer"/"swap" -> PowerButton
 var _power := ""
 var _swap_first = null  # Vector2i do primeiro bloco da troca, ou null
 var _select_tween: Tween
+var _rng := RandomNumberGenerator.new()
+var _goal_bar: ProgressBar
+var _goal_fill: StyleBoxFlat
+var _goal_tween: Tween
+var _shown_score := 0.0
+var _score_tween: Tween
+var _last_move_tween: Tween
 
 
 func _ready() -> void:
@@ -97,6 +106,23 @@ func _build_ui() -> void:
 	_goal_chip.custom_minimum_size = Vector2(52, 52)
 	_goal_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	goal_row.add_child(_goal_chip)
+
+	_goal_bar = ProgressBar.new()
+	_goal_bar.show_percentage = false
+	_goal_bar.custom_minimum_size = Vector2(440, 16)
+	_goal_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_goal_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bar_bg := StyleBoxFlat.new()
+	bar_bg.bg_color = Color(0.03, 0.05, 0.15, 0.9)
+	bar_bg.border_color = Color(NEON_CYAN, 0.3)
+	bar_bg.set_border_width_all(2)
+	bar_bg.set_corner_radius_all(8)
+	_goal_fill = StyleBoxFlat.new()
+	_goal_fill.set_corner_radius_all(8)
+	_goal_fill.shadow_size = 8
+	_goal_bar.add_theme_stylebox_override("background", bar_bg)
+	_goal_bar.add_theme_stylebox_override("fill", _goal_fill)
+	hud.add_child(_goal_bar)
 
 	var row := HBoxContainer.new()
 	hud.add_child(row)
@@ -267,6 +293,12 @@ func _start_level() -> void:
 	_session = LevelLoader.build_session(GameState.current_level())
 	_power = ""
 	_swap_first = null
+	_rng.randomize()
+	for t in [_score_tween, _goal_tween]:
+		if t:
+			t.kill()
+	_shown_score = 0.0
+	_goal_bar.value = 0.0
 	_rebuild_blocks()
 	_pause_overlay.visible = false
 	_result_overlay.visible = false
@@ -387,6 +419,62 @@ func _on_board_input(event: InputEvent) -> void:
 	_animate(result)
 
 
+## Fim de qualquer jogada (toque, bomba ou poder): encerra a fase ou trata o
+## tabuleiro travado.
+func _after_move() -> void:
+	_busy = false
+	_layout()
+	if _session.status != GameSession.Status.PLAYING:
+		_finish()
+	elif _session.is_stuck():
+		_handle_stuck()
+
+
+## Sem grupos: com poderes, o jogador escolhe usar um; sem poderes, embaralha de graça.
+func _handle_stuck() -> void:
+	var has_power := false
+	for p in _power_buttons:
+		if GameState.power_count(p) > 0:
+			has_power = true
+			var pb: Control = _power_buttons[p]
+			pb.pivot_offset = pb.size / 2.0
+			var t := create_tween()
+			for i in 3:
+				t.tween_property(pb, "scale", Vector2.ONE * 1.1, 0.18).set_trans(Tween.TRANS_SINE)
+				t.tween_property(pb, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_SINE)
+	if has_power:
+		Audio.play_sfx("thud")
+		_show_tip(STUCK_TIP, true)
+	else:
+		_shuffle_board()
+
+
+func _shuffle_board() -> void:
+	if not _session.shuffle(_rng):
+		_finish()  # nem embaralhando dá: fase perdida
+		return
+	_busy = true
+	var gen := _generation
+	_combo_text("Embaralhando!", NEON_CYAN)
+	Audio.play_sfx("powerup")
+	var out := create_tween().set_parallel(true)
+	for p in _blocks:
+		out.tween_property(_blocks[p], "scale", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	await out.finished
+	if gen != _generation:
+		return
+	for p in _blocks:
+		_blocks[p].color_index = _session.board.get_cell(p.x, p.y)
+	var back := create_tween().set_parallel(true)
+	for p in _blocks:
+		back.tween_property(_blocks[p], "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await back.finished
+	if gen != _generation:
+		return
+	_busy = false
+	_layout()
+
+
 # --- Poderes especiais ------------------------------------------------------------
 
 ## Liga/desliga o modo do poder. O poder só é gasto quando o jogador o usa.
@@ -403,7 +491,9 @@ func _set_power(power: String) -> void:
 		_power_buttons[p].active = p == power
 	if power != "":
 		_show_tip(POWER_TIPS[power], true)
-	elif _tutorial_label.text in POWER_TIPS.values():
+	elif _session.is_stuck():
+		_show_tip(STUCK_TIP, true)
+	elif _tutorial_label.text in POWER_TIPS.values() or _tutorial_label.text == STUCK_TIP:
 		_hide_tip()
 
 
@@ -470,10 +560,7 @@ func _animate_swap(a: Vector2i, b: Vector2i) -> void:
 	block_b.z_index = 0
 	for p in [a, b]:
 		_burst(_cell_center(p), PowerButton.COLORS.swap, false)
-	_busy = false
-	_layout()
-	if _session.status != GameSession.Status.PLAYING:
-		_finish()
+	_after_move()
 
 
 ## Pequeno balanço quando o toque não forma grupo (feedback sem gastar jogada).
@@ -528,10 +615,7 @@ func _animate(result: Dictionary) -> void:
 		if gen != _generation:
 			return
 
-	_busy = false
-	_layout()
-	if _session.status != GameSession.Status.PLAYING:
-		_finish()
+	_after_move()
 
 
 # --- Efeitos ------------------------------------------------------------------
@@ -747,8 +831,10 @@ func _update_hud() -> void:
 		_goal_label.text = "Meta: %d / %d" % [mini(_session.goal_progress(), _session.goal_target()), _session.goal_target()]
 	else:
 		_goal_label.text = "Meta: %d pontos" % _session.goal_target()
-	_score_label.text = "Pontos: %d" % _session.score
+	_update_goal_bar()
+	_animate_score()
 	_moves_label.text = "Jogadas: %d" % _session.moves_left
+	_update_last_move_warning()
 	for p in _power_buttons:
 		var pb = _power_buttons[p]
 		pb.count = GameState.power_count(p)
@@ -758,17 +844,108 @@ func _update_hud() -> void:
 	Fx.glow_label(_moves_label, DANGER_COLOR if danger else MOVES_COLOR, 12 if danger else 6)
 
 
+## Barra de meta: enche suavemente; fica verde quando a meta é cumprida.
+func _update_goal_bar() -> void:
+	var target: float = maxf(_session.goal_target(), 1)
+	var frac: float = clampf(_session.goal_progress() / target, 0.0, 1.0)
+	var col: Color = NEON_CYAN
+	if frac >= 1.0:
+		col = GOAL_DONE_COLOR
+	elif _session.goal_type() == "color":
+		col = BlockView.color_of(int(_session.goal.get("color", 0)))
+	_goal_fill.bg_color = col
+	_goal_fill.shadow_color = Color(col, 0.45)
+	if _goal_tween:
+		_goal_tween.kill()
+	_goal_tween = create_tween()
+	_goal_tween.tween_property(_goal_bar, "value", frac * 100.0, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+## O placar "rola" do valor mostrado até a pontuação atual.
+func _animate_score() -> void:
+	if _score_tween:
+		_score_tween.kill()
+	if is_equal_approx(_shown_score, _session.score):
+		_set_shown_score(_session.score)
+		return
+	_score_tween = create_tween()
+	_score_tween.tween_method(_set_shown_score, _shown_score, float(_session.score), 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func _set_shown_score(v: float) -> void:
+	_shown_score = v
+	_score_label.text = "Pontos: %d" % roundi(v)
+
+
+## Com 1 jogada sobrando, o contador pulsa e aparece um aviso.
+func _update_last_move_warning() -> void:
+	var last: bool = _session.moves_left == 1 and _session.status == GameSession.Status.PLAYING
+	if last and _last_move_tween == null:
+		_moves_label.pivot_offset = Vector2(_moves_label.size.x, _moves_label.size.y / 2.0)
+		_last_move_tween = create_tween().set_loops()
+		_last_move_tween.tween_property(_moves_label, "scale", Vector2.ONE * 1.15, 0.35).set_trans(Tween.TRANS_SINE)
+		_last_move_tween.tween_property(_moves_label, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_SINE)
+		var pos := _moves_label.global_position + Vector2(_moves_label.size.x - 130.0, _moves_label.size.y + 30.0)
+		_float_text("Última jogada!", pos, DANGER_COLOR, 34)
+	elif not last and _last_move_tween:
+		_last_move_tween.kill()
+		_last_move_tween = null
+		_moves_label.scale = Vector2.ONE
+
+
+## Bônus de vitória: cada jogada que sobrou estoura um bloco (+100), com som
+## subindo de tom. As estrelas já foram calculadas antes.
+func _play_end_bonus() -> void:
+	var moves: int = _session.moves_left
+	var cells: Array[Vector2i] = _session.play_end_bonus(_rng)
+	if cells.is_empty():
+		return
+	var gen := _generation
+	if _score_tween:
+		_score_tween.kill()
+	_set_shown_score(_session.score - _session.end_bonus)
+	_combo_text("Bônus!", MOVES_COLOR)
+	await get_tree().create_timer(0.7, false).timeout
+	for i in cells.size():
+		if gen != _generation:
+			return
+		var p: Vector2i = cells[i]
+		var block: Control = _blocks.get(p)
+		_blocks.erase(p)
+		if block:
+			_burst(_cell_center(p), BlockView.color_of(block.color_index), false)
+			var t := create_tween()
+			t.tween_property(block, "scale", Vector2.ZERO, 0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+			t.tween_callback(block.queue_free)
+		_float_text("+%d" % GameSession.END_BONUS_POINTS, _cell_center(p), MOVES_COLOR, 34)
+		Audio.play_sfx("pop", minf(0.9 + i * 0.06, 1.8))
+		moves -= 1
+		_moves_label.text = "Jogadas: %d" % moves
+		_set_shown_score(_shown_score + GameSession.END_BONUS_POINTS)
+		await get_tree().create_timer(0.11, false).timeout
+	_set_shown_score(_session.score)
+	await get_tree().create_timer(0.5, false).timeout
+
+
 func _finish() -> void:
 	_hint_timer.stop()
+	var gen := _generation
 	var won: bool = _session.status == GameSession.Status.WON
 	var stars: int = _session.stars()
 	var title_color: Color = Color("#2BFF88") if won else Color("#FF4FD8")
 	_set_power("")
 	_power_label.visible = false
+	_pause_button.disabled = true
 	if won:
-		var gained := GameState.complete_current_level(stars)
+		var gained := GameState.complete_current_level(stars)  # salva antes da animação do bônus
 		_power_label.visible = gained > 0
 		_power_label.text = "+%d Martelo e +%d Troca!" % [gained, gained]
+		for pb in _power_buttons.values():
+			pb.disabled = true
+		_busy = true
+		await _play_end_bonus()
+		if gen != _generation:
+			return
 		_result_title.text = "Vitória!"
 		Audio.play_sfx("win")
 	else:
@@ -779,6 +956,8 @@ func _finish() -> void:
 	_result_stars.count = 0
 	_result_stars.visible = won
 	_result_score.text = "Pontos: %d" % _session.score
+	if _session.end_bonus > 0:
+		_result_score.text += "  (bônus +%d)" % _session.end_bonus
 	var next := GameState.current_index + 1
 	var has_next: bool = won and GameState.has_next_level()
 	_next_button.visible = has_next and GameState.is_unlocked(next)
