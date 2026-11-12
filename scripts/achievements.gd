@@ -19,6 +19,7 @@ const LIST := [
 	{"id": "fiel", "title": "Fiel", "desc": "Vença 7 fases diárias", "stat": "daily_wins", "goal": 7, "reward": {"hammer": 1, "swap": 1}},
 	{"id": "metade", "title": "Metade do caminho", "desc": "Vença a fase 30", "stat": "max_level", "goal": 30, "reward": {"hammer": 1, "swap": 1}},
 	{"id": "mestre", "title": "Mestre Colorbitz", "desc": "Vença a fase 60", "stat": "max_level", "goal": 60, "reward": {"hammer": 2, "swap": 2}},
+	{"id": "sem_fim", "title": "Sem fim", "desc": "Vença a fase 100 do modo infinito", "stat": "max_level", "goal": 100, "reward": {"hammer": 2, "swap": 2}},
 ]
 
 

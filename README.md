@@ -20,6 +20,7 @@ antes de acabarem as jogadas.
   <img src="docs/achievements.png" width="200" alt="Conquistas">
   <img src="docs/tutorial_swap_pair.png" width="200" alt="Tutorial da Troca">
   <img src="docs/en_game.png" width="200" alt="Jogo em inglês">
+  <img src="docs/endless_levels.png" width="200" alt="Modo infinito na tela de fases">
 </p>
 
 > Projeto em desenvolvimento: este é o MVP do meu primeiro jogo para Android.
@@ -59,7 +60,11 @@ antes de acabarem as jogadas.
   Brasília). Cada dia da semana tem um tema (pedras, coringas, gelo, joias, ampulheta, meta dupla,
   limpeza). Pode repetir à vontade; a primeira vitória do dia dá +1 Martelo e +1 Troca e o jogo
   guarda o recorde do dia.
-- **Conquistas** (15): por exemplo "criar 25 bombas", "vencer 10 fases sem usar poderes",
+- **Modo infinito**: vencer a fase 60 libera fases sem fim a partir da 61, geradas por
+  [`scripts/endless.gd`](scripts/endless.gd). Os tipos de meta se revezam (pontos, cor, joias,
+  duas cores, formato, limpar) com especiais sorteados; a dificuldade sobe até a fase 121 e
+  para num teto justo (~30–70% de vitória no simulador). As estrelas contam para os poderes.
+- **Conquistas** (16): por exemplo "criar 25 bombas", "vencer 10 fases sem usar poderes",
   "vencer 7 fases diárias". Cada uma dá poderes e aparece num aviso na hora em que é liberada.
 - **Opções**: som, música, vibração, **efeitos reduzidos** (sem tremor de tela nem ondas
   de choque e com menos partículas, para quem é sensível a movimento), **idioma**
@@ -123,7 +128,8 @@ godot --path . -s tools/screenshot.gd
 
 ```bash
 godot --headless --path . -s tools/balance.gd -- 300
-godot --headless --path . -s tools/balance.gd -- 300 daily   # modelos da fase diária
+godot --headless --path . -s tools/balance.gd -- 300 daily     # modelos da fase diária
+godot --headless --path . -s tools/balance.gd -- 200 endless   # modo infinito (início e teto)
 ```
 
 ### Regerar os sons
@@ -149,7 +155,8 @@ assets/    tema, fonte e áudio gerado
 data/      fases (levels.json)
 docs/      imagens do README
 scenes/    cenas: menu, seleção de fases, conquistas, opções e jogo
-scripts/   lógica pura (board, game_session, progress, level_loader, daily, achievements),
+scripts/   lógica pura (board, game_session, progress, level_loader, daily, endless,
+           achievements, i18n),
            autoloads GameState e Audio, tela de jogo (game_view) e efeitos (fx)
 scripts/ui telas (menu, fases, conquistas, opções) e componentes da tela de jogo:
            game_hud, power_bar, board_fx, tip_balloon, pause_menu, result_panel,

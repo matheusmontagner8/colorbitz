@@ -106,3 +106,23 @@ func test_color_goals_always_have_enough_blocks() -> void:
 				assert_true(s.board.count_color(c) >= minimums[c],
 					"fase %s semente %d: cor %d tem %d de %d" % [level.get("id", level.get("name")), i, c, s.board.count_color(c), minimums[c]])
 			assert_true(s.board.has_moves(), "fase %s semente %d sem jogadas" % [level.get("id", level.get("name")), i])
+
+
+## Modo infinito: fases geradas válidas, iguais para o mesmo número e jogáveis.
+func test_endless_levels() -> void:
+	var Endless = preload("res://scripts/endless.gd")
+	assert_eq(Endless.level_for(75), Endless.level_for(75), "mesmo número, mesma fase")
+	var kinds := {}
+	for n in range(61, 400):
+		var level: Dictionary = Endless.level_for(n)
+		assert_eq(int(level.id), n)
+		assert_true(int(level["moves"]) >= 10, "fase %d com jogadas" % n)
+		kinds[level["goal"]["type"]] = true
+		var s = LevelLoader.build_session(level)
+		assert_true(s.board.has_moves(), "fase %d jogável" % n)
+		assert_true(s.goal_target() > 0, "fase %d com meta" % n)
+		if n > 61:
+			assert_true(Endless.level_for(n - 1)["goal"] != level["goal"] or Endless.level_for(n - 1).get("mask") != level.get("mask"), "fase %d diferente da anterior" % n)
+	assert_eq(kinds.size(), 5, "usa os tipos de meta (score, color, colors, clear, drop)")
+	assert_eq(Endless.difficulty(61), 0.0)
+	assert_eq(Endless.difficulty(5000), 1.0, "a dificuldade tem teto")

@@ -796,6 +796,9 @@ func _daily_info() -> Array:
 ## Se a próxima fase é um portão de estrelas, avisa se foi liberada ou
 ## quantas estrelas faltam. [texto, cor] (texto vazio = sem aviso)
 func _gate_info(next: int, has_next: bool) -> Array:
+	if has_next and next == GameState.levels.size():
+		return [tr("Modo infinito liberado! As fases
+agora continuam sem fim."), Color("#2BFF88")]
 	var required: int = GameState.stars_required(next) if has_next else 0
 	if required == 0:
 		return ["", Color.WHITE]

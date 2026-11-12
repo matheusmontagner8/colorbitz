@@ -2,7 +2,7 @@
 ## com dois jogadores automáticos e mostra a taxa de vitória.
 ##   - guloso: toca sempre o maior grupo (da cor-alvo, se a meta for de cor)
 ##   - aleatório: toca qualquer grupo válido
-## Uso: godot --headless --path . -s tools/balance.gd [-- N_PARTIDAS [arquivo.json | daily]]
+## Uso: godot --headless --path . -s tools/balance.gd [-- N_PARTIDAS [arquivo.json | daily | endless]]
 ## Com "daily", simula os modelos da fase diária (scripts/daily.gd) em tabuleiros aleatórios.
 extends SceneTree
 
@@ -10,6 +10,7 @@ const LevelLoader = preload("res://scripts/level_loader.gd")
 const GameSession = preload("res://scripts/game_session.gd")
 const Board = preload("res://scripts/board.gd")
 const Daily = preload("res://scripts/daily.gd")
+const Endless = preload("res://scripts/endless.gd")
 
 
 func _initialize() -> void:
@@ -18,7 +19,11 @@ func _initialize() -> void:
 	if args.size() > 0:
 		runs = int(args[0])
 	var levels: Array = []
-	if args.size() > 1 and args[1] == "daily":
+	if args.size() > 1 and args[1] == "endless":
+		# Começo (61-72) e teto da dificuldade (121-132) do modo infinito.
+		for n in range(61, 73) + range(121, 133):
+			levels.append(Endless.level_for(n))
+	elif args.size() > 1 and args[1] == "daily":
 		for i in Daily.TEMPLATES.size():
 			var t: Dictionary = Daily.TEMPLATES[i].duplicate(true)
 			t["id"] = i + 1  # sem "seed": cada partida tem um tabuleiro diferente

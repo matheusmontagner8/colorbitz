@@ -269,3 +269,13 @@ func test_reset_keeps_only_settings() -> void:
 	assert_true(q.achievements.is_empty() and q.tutorials.is_empty())
 	assert_false(q.music_on, "opções mantidas")
 	assert_true(q.reduce_effects, "opções mantidas")
+
+
+func test_endless_best() -> void:
+	var p := Progress.new()
+	assert_eq(p.endless_best(60), 0)
+	p.record_result(60, 2)
+	p.record_result(61, 1)
+	p.record_result(62, 3)
+	assert_eq(p.endless_best(60), 62)
+	assert_eq(p.stat_value("max_level"), 62)

@@ -97,6 +97,15 @@ func missing_stars(index: int, levels: Array) -> int:
 	return maxi(0, stars_required(index, levels) - stars_before(index, levels))
 
 
+## Modo infinito: maior fase vencida depois da campanha (0 se nenhuma).
+func endless_best(campaign_size: int) -> int:
+	var best := 0
+	for key in stars:
+		if String(key).is_valid_int() and int(key) > campaign_size and int(stars[key]) > 0:
+			best = maxi(best, int(key))
+	return best
+
+
 func total_stars() -> int:
 	var total := 0
 	for v in stars.values():

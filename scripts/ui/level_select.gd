@@ -40,7 +40,8 @@ func _ready() -> void:
 			_add_gate_badge(button, required, GameState.missing_stars(i) == 0)
 		else:
 			_add_lock_icon(button, 0.0, 1.0)
-	%StarsLabel.text = tr("Estrelas: %d de %d") % [progress.total_stars(), levels.size() * 3]
+	%StarsLabel.text = tr("Estrelas: %d de %d") % [progress.stars_before(levels.size(), levels), levels.size() * 3]
+	_add_endless_button()
 	var powers := Label.new()
 	powers.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	powers.add_theme_font_size_override("font_size", 26)
@@ -53,6 +54,23 @@ func _ready() -> void:
 		# Rola até a fase mais avançada liberada.
 		await get_tree().process_frame
 		%Scroll.ensure_control_visible(last_unlocked)
+
+
+## Botão fixo embaixo da grade: continua o modo infinito (trancado até
+## vencer a última fase da campanha).
+func _add_endless_button() -> void:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(0, 112)
+	button.add_theme_font_size_override("font_size", 34)
+	if GameState.endless_unlocked():
+		var next: int = GameState.endless_next_index()
+		button.text = tr("Modo infinito: fase %d") % (next + 1)
+		button.theme_type_variation = &"AccentButton"
+		button.pressed.connect(GameState.play_level.bind(next))
+	else:
+		button.text = tr("Modo infinito: vença a fase %d") % GameState.levels.size()
+		button.disabled = true
+	%Scroll.add_sibling(button)
 
 
 func _add_lock_icon(button: Button, offset_y: float, scale_factor: float) -> void:

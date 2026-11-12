@@ -7,6 +7,7 @@ const Progress = preload("res://scripts/progress.gd")
 const Daily = preload("res://scripts/daily.gd")
 const Fx = preload("res://scripts/fx.gd")
 const I18n = preload("res://scripts/i18n.gd")
+const Endless = preload("res://scripts/endless.gd")
 
 const SAVE_PATH := "user://save.json"
 const SCENE_MENU := "res://scenes/main_menu.tscn"
@@ -53,11 +54,31 @@ func vibrate(duration_ms: int, amplitude: float = -1.0) -> void:
 
 
 func current_level() -> Dictionary:
-	return _daily_level if daily_mode else levels[current_index]
+	return _daily_level if daily_mode else level_at(current_index)
 
 
+## Fase pelo índice: 0..59 vêm do levels.json; dali em diante, modo infinito.
+func level_at(index: int) -> Dictionary:
+	return levels[index] if index < levels.size() else Endless.level_for(index + 1)
+
+
+func is_endless(index: int = current_index) -> bool:
+	return not daily_mode and index >= levels.size()
+
+
+## Depois da campanha sempre há uma próxima fase (modo infinito).
 func has_next_level() -> bool:
-	return not daily_mode and current_index + 1 < levels.size()
+	return not daily_mode
+
+
+## O modo infinito abre ao vencer a última fase da campanha.
+func endless_unlocked() -> bool:
+	return progress.stars_for(levels.size()) > 0
+
+
+## Índice da próxima fase do modo infinito (a seguinte à maior já vencida).
+func endless_next_index() -> int:
+	return maxi(levels.size(), progress.endless_best(levels.size()))
 
 
 ## Dia atual no horário de Brasília (veja Daily.day_number).
@@ -66,6 +87,8 @@ func today() -> int:
 
 
 func is_unlocked(index: int) -> bool:
+	if index >= levels.size():  # modo infinito: basta ter vencido a anterior
+		return progress.stars_for(index) > 0
 	return progress.is_unlocked(index, levels)
 
 
@@ -261,7 +284,7 @@ func go_to_achievements() -> void:
 
 func play_level(index: int) -> void:
 	daily_mode = false
-	current_index = clampi(index, 0, levels.size() - 1)
+	current_index = maxi(index, 0)
 	go_to(SCENE_GAME)
 
 

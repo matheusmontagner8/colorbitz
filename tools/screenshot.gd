@@ -313,6 +313,39 @@ func _initialize() -> void:
 	await _save("res://docs/achievements.png")
 	print("conquistas: ok")
 
+	# Modo infinito: vencer a fase 60 libera fases sem fim a partir da 61.
+	for i in 59:
+		progress.record_result(i + 1, 2)
+	_gs.daily_mode = false  # o cenário da fase diária deixou o modo ligado
+	_gs.current_index = 59
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	game = current_scene
+	game._session.status = game.GameSession.Status.WON
+	game._finish()
+	await create_timer(4.5).timeout
+	assert(game._result.info_label.text.begins_with("Modo infinito liberado"), "aviso do modo infinito")
+	assert(game._result.next_button.visible, "próxima fase (61) disponível")
+	await _save("res://docs/endless_unlocked.png")
+	change_scene_to_file("res://scenes/level_select.tscn")
+	await _frames(6)
+	var endless_button: Button = null
+	for child in current_scene.get_node("%Scroll").get_parent().get_children():
+		if child is Button and child.text.begins_with("Modo infinito"):
+			endless_button = child
+	assert(endless_button != null and endless_button.text == "Modo infinito: fase 61" and not endless_button.disabled, "botão do modo infinito")
+	await _save("res://docs/endless_levels.png")
+	endless_button.pressed.emit()
+	await _frames(6)
+	game = current_scene
+	assert(_gs.current_index == 60 and game._hud.level_label.text == "Fase 61", "fase 61 em jogo")
+	await _save("res://docs/endless.png")
+	game._session.status = game.GameSession.Status.WON
+	game._finish()
+	await create_timer(4.5).timeout
+	assert(game._result.next_button.visible and _gs.endless_next_index() == 61, "depois da 61 vem a 62")
+	print("modo infinito: ok")
+
 	# Opções: trocar o idioma pela tela muda os textos na hora.
 	change_scene_to_file("res://scenes/options.tscn")
 	await _frames(6)
