@@ -239,3 +239,13 @@ func test_daily_stats_and_achievements_saved() -> void:
 	assert_true(q.has_achievement("desafio_do_dia"))
 	assert_eq(q.power_count("hammer"), p.power_count("hammer"))
 	_cleanup()
+
+
+func test_tutorials_saved() -> void:
+	var p := Progress.new()
+	p.tutorials["powers"] = true
+	var q := Progress.new()
+	q.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
+	assert_true(q.tutorials.has("powers"))
+	q.from_dict({})
+	assert_true(q.tutorials.is_empty(), "save antigo: tutorial ainda não visto")

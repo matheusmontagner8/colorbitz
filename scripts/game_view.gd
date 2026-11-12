@@ -8,6 +8,7 @@ const BlockView = preload("res://scripts/block_view.gd")
 const StarsView = preload("res://scripts/ui/stars_view.gd")
 const Fx = preload("res://scripts/fx.gd")
 const PowerButton = preload("res://scripts/ui/power_button.gd")
+const PowerTutorial = preload("res://scripts/ui/power_tutorial.gd")
 
 const NEON_CYAN := Color("#3DE0FF")
 const MOVES_COLOR := Color("#FFE53D")
@@ -80,6 +81,8 @@ var _score_tween: Tween
 var _last_move_tween: Tween
 ## Só aparece com o tabuleiro travado (e o jogador ainda tendo poderes).
 var _shuffle_button: Button
+## Tutorial dos poderes (só na primeira vez; null quando não está rodando).
+var _tutorial: Control
 
 
 func _ready() -> void:
@@ -343,6 +346,34 @@ func _start_level() -> void:
 	_layout()
 	_update_hud()
 	_hint_timer.start()
+	_maybe_start_tutorial()
+
+
+## Tutorial dos poderes: na primeira fase jogada a partir da 2 (fora a diária).
+func _maybe_start_tutorial() -> void:
+	if _tutorial:
+		_tutorial.queue_free()
+		_tutorial = null
+	if GameState.daily_mode or GameState.current_index < 1 or GameState.progress.tutorials.has("powers"):
+		return
+	_tutorial_label.visible = false
+	_tutorial = PowerTutorial.new(self)
+	add_child(_tutorial)
+	move_child(_tutorial, _pause_overlay.get_index())  # pausa e resultado ficam por cima
+	_tutorial.finished.connect(_on_tutorial_finished)
+
+
+func _on_tutorial_finished() -> void:
+	GameState.progress.tutorials["powers"] = true
+	GameState.save()
+	_tutorial = null
+	_update_hud()
+	_hint_timer.start()
+
+
+## Durante o tutorial os poderes são grátis.
+func _tutorial_free() -> bool:
+	return _tutorial != null and _tutorial.is_free()
 
 
 ## Recria os nós visuais a partir do estado atual do tabuleiro.
@@ -441,6 +472,9 @@ func _on_board_input(event: InputEvent) -> void:
 		return
 	_hint_timer.start()  # reinicia a contagem da dica
 	var cell := Vector2i((mb.position / _cell).floor())
+	if _tutorial and not _tutorial.allows_cell(cell):
+		_nudge(cell)
+		return
 	if _power == "hammer":
 		_use_hammer(cell)
 		return
@@ -460,6 +494,8 @@ func _on_board_input(event: InputEvent) -> void:
 ## tabuleiro travado.
 func _after_move() -> void:
 	_busy = false
+	if _tutorial:
+		_tutorial.on_move_finished()
 	# Estatísticas das conquistas: soma a cada jogada; no fim da fase, salva.
 	GameState.record_stats(_session.take_stats(), _session.status != GameSession.Status.PLAYING)
 	_shuffle_button.visible = false
@@ -538,7 +574,11 @@ func _shuffle_board() -> void:
 func _toggle_power(power: String) -> void:
 	if _busy or _session.status != GameSession.Status.PLAYING:
 		return
+	if _tutorial and not _tutorial.allows_power(power):
+		return
 	_set_power("" if _power == power else power)
+	if _tutorial:
+		_tutorial.on_power_selected(power)
 
 
 func _set_power(power: String) -> void:
@@ -546,7 +586,9 @@ func _set_power(power: String) -> void:
 	_power = power
 	for p in _power_buttons:
 		_power_buttons[p].active = p == power
-	if power != "":
+	if power != "" and _tutorial:
+		pass  # o tutorial mostra as próprias explicações
+	elif power != "":
 		_show_tip(POWER_TIPS[power], true)
 	elif _session.is_stuck():
 		_show_tip(STUCK_TIP, true)
@@ -559,8 +601,11 @@ func _use_hammer(cell: Vector2i) -> void:
 	if result.is_empty():
 		_nudge(cell)  # joia (ou célula vazia): o Martelo não quebra
 		return
-	GameState.use_power("hammer")
+	if not _tutorial_free():
+		GameState.use_power("hammer")
 	_set_power("")
+	if _tutorial:
+		_tutorial.on_hammer_used()
 	_animate(result)
 
 
@@ -577,6 +622,8 @@ func _pick_swap(cell: Vector2i) -> void:
 		_select_tween.tween_property(block, "scale", Vector2.ONE * 1.15, 0.3).set_trans(Tween.TRANS_SINE)
 		_select_tween.tween_property(block, "scale", Vector2.ONE * 0.95, 0.3).set_trans(Tween.TRANS_SINE)
 		Audio.play_sfx("click")
+		if _tutorial:
+			_tutorial.on_swap_first()
 		return
 	var first: Vector2i = _swap_first
 	if cell == first:
@@ -584,8 +631,11 @@ func _pick_swap(cell: Vector2i) -> void:
 		return
 	if not _session.use_swap(first, cell):
 		return
-	GameState.use_power("swap")
+	if not _tutorial_free():
+		GameState.use_power("swap")
 	_set_power("")
+	if _tutorial:
+		_tutorial.on_swap_done()
 	_animate_swap(first, cell)
 
 
@@ -910,7 +960,7 @@ func _apply_shake(strength: float) -> void:
 
 ## Se o jogador ficar parado, o maior grupo pisca para mostrar onde tocar.
 func _show_hint() -> void:
-	if _busy or _power != "" or _session.status != GameSession.Status.PLAYING:
+	if _busy or _power != "" or _tutorial or _session.status != GameSession.Status.PLAYING:
 		return
 	var bombs: Array = _session.board.bombs()
 	var targets: Array = [bombs[0]] if not bombs.is_empty() else _session.board.best_group()

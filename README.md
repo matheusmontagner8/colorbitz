@@ -18,6 +18,7 @@ antes de acabarem as jogadas.
   <img src="docs/daily_reward.png" width="200" alt="Recompensa diária">
   <img src="docs/daily_result.png" width="200" alt="Resultado da fase diária">
   <img src="docs/achievements.png" width="200" alt="Conquistas">
+  <img src="docs/tutorial_swap_pair.png" width="200" alt="Tutorial da Troca">
 </p>
 
 > Projeto em desenvolvimento: este é o MVP do meu primeiro jogo para Android.
@@ -45,6 +46,8 @@ antes de acabarem as jogadas.
   - **Martelo**: destrói um bloco à escolha (50 pontos; numa bomba, ela explode).
   - **Troca**: troca dois blocos quaisquer de lugar.
   Começa com 3 de cada e ganha +1 de cada a cada 21 estrelas conquistadas. O saldo fica no save.
+  Na primeira fase jogada a partir da 2, um **tutorial guiado** escurece a tela e destaca o botão
+  e os blocos que o jogador deve tocar para usar cada poder (usos grátis, só uma vez).
 - **Sem jogadas?** A fase não acaba: com poderes, o jogador pode usar o Martelo ou a Troca, ou
   tocar em **Embaralhar** (grátis, só aparece com o tabuleiro travado); sem poderes, o tabuleiro
   é embaralhado automaticamente.

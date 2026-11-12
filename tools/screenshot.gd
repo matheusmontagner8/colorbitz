@@ -26,6 +26,7 @@ func _initialize() -> void:
 	demo.daily_streak = 2
 	demo.stats = {"bombs_created": 1, "best_group": 11, "blocks": 420, "ice": 12, "powers": 4, "wins_no_power": 6, "wins": 9}
 	demo.achievements = {"primeira_bomba": true}
+	demo.tutorials = {"powers": true}  # o tutorial dos poderes tem cenário próprio
 	_gs.progress = demo
 
 	await _shot("res://scenes/main_menu.tscn", "res://docs/menu.png")
@@ -185,6 +186,51 @@ func _initialize() -> void:
 	assert(game._blocks.size() == game._session.board.count_blocks(), "visual e tabuleiro após a joia")
 	assert(game._board_root.get_child_count() == game._blocks.size(), "nó da joia liberado")
 	print("especiais (formato, joia, gelo): ok")
+
+	# Tutorial dos poderes (jogador novo na fase 2): só o alvo destacado aceita
+	# toque e os usos são grátis.
+	_gs.progress.tutorials.erase("powers")
+	_gs.current_index = 1
+	game._start_level()
+	await create_timer(0.6).timeout
+	var tut = game._tutorial
+	assert(tut != null and tut.step == tut.Step.HAMMER_BUTTON, "tutorial começa no Martelo")
+	var hammers0: int = _gs.power_count("hammer")
+	var swaps0: int = _gs.power_count("swap")
+	game._power_buttons["swap"].pressed.emit()  # fora de ordem: ignorado
+	await _frames(2)
+	assert(game._power == "", "só o botão destacado responde")
+	await _save("res://docs/tutorial_hammer.png")
+	game._power_buttons["hammer"].pressed.emit()
+	await _frames(2)
+	assert(tut.step == tut.Step.HAMMER_CELL, "passo do bloco")
+	var other := Vector2i(0, 0) if tut.hammer_cell != Vector2i(0, 0) else Vector2i(1, 0)
+	var blocks0: int = game._session.board.count_blocks()
+	_tap(game, other)  # bloco errado: não faz nada
+	await _frames(2)
+	assert(game._session.board.count_blocks() == blocks0, "bloco fora do destaque é ignorado")
+	await _save("res://docs/tutorial_cell.png")
+	_tap(game, tut.hammer_cell)
+	await create_timer(1.0).timeout
+	assert(tut.step == tut.Step.SWAP_BUTTON and tut.swap_cells.size() == 2, "passo da Troca")
+	game._power_buttons["swap"].pressed.emit()
+	await _frames(3)
+	await _save("res://docs/tutorial_swap_pair.png")
+	_tap(game, tut.swap_cells[0])
+	await _frames(2)
+	assert(tut.step == tut.Step.SWAP_SECOND, "segundo bloco da troca")
+	await _save("res://docs/tutorial_swap.png")
+	_tap(game, tut.swap_cells[1])
+	await create_timer(0.8).timeout
+	assert(game._tutorial == null and _gs.progress.tutorials.has("powers"), "tutorial concluído e salvo")
+	assert(_gs.power_count("hammer") == hammers0 and _gs.power_count("swap") == swaps0, "tutorial não gasta poderes")
+	assert(game._session.moves_left == game._session.max_moves, "nem jogadas")
+	await create_timer(4.0).timeout
+	assert(not is_instance_valid(tut), "balão final some sozinho")
+	game._start_level()
+	await _frames(3)
+	assert(game._tutorial == null, "não repete depois de concluído")
+	print("tutorial dos poderes: ok")
 
 	# Tela de resultado (vitória forçada), com o bônus das jogadas que sobraram.
 	# Vence a fase 9 com 3 estrelas: 18 - 1 + 3 = 20, o que libera o portão da fase 10.

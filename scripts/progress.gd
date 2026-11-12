@@ -35,6 +35,8 @@ var daily_best_score := 0
 var stats: Dictionary = {}
 ## id da conquista -> true
 var achievements: Dictionary = {}
+## Tutoriais já concluídos (ex.: "powers" -> true).
+var tutorials: Dictionary = {}
 
 
 ## Normaliza o id da fase: o JSON devolve números como float (1.0) e
@@ -240,6 +242,7 @@ func to_dict() -> Dictionary:
 		},
 		"stats": stats.duplicate(),
 		"achievements": achievements.keys(),
+		"tutorials": tutorials.keys(),
 		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on},
 	}
 
@@ -281,6 +284,11 @@ func from_dict(data: Dictionary) -> void:
 		for id in saved_ach:
 			if not Achievements.find(str(id)).is_empty():
 				achievements[str(id)] = true
+	tutorials = {}
+	var saved_tut = data.get("tutorials", [])
+	if typeof(saved_tut) == TYPE_ARRAY:
+		for id in saved_tut:
+			tutorials[str(id)] = true
 	var settings = data.get("settings", {})
 	if typeof(settings) == TYPE_DICTIONARY:
 		sound_on = bool(settings.get("sound", true))
