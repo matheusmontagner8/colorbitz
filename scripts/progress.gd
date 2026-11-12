@@ -15,7 +15,7 @@ var vibration_on := true
 ## estrelas. Guardamos só quantos foram usados; o saldo é calculado.
 const POWERS := ["hammer", "swap"]
 const POWER_START := 3
-const POWER_STARS_STEP := 15
+const POWER_STARS_STEP := 21
 var powers_used: Dictionary = {}
 
 

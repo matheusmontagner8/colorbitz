@@ -132,16 +132,18 @@ func test_from_dict_sanitizes_values() -> void:
 	assert_true(p.music_on)
 
 
-func test_powers_start_at_3_and_grow_every_15_stars() -> void:
+func test_powers_start_at_3_and_grow_every_21_stars() -> void:
 	var p := Progress.new()
 	assert_eq(p.power_count("hammer"), 3)
 	assert_eq(p.power_count("swap"), 3)
 	for i in 5:
 		p.record_result(i + 1, 2)  # 10 estrelas
 	assert_eq(p.power_count("hammer"), 3)
-	assert_eq(p.stars_to_next_power(), 5)
+	assert_eq(p.stars_to_next_power(), 11)
 	p.record_result(6, 3)
-	p.record_result(7, 2)  # 15 estrelas
+	p.record_result(7, 3)
+	p.record_result(8, 3)
+	p.record_result(9, 2)  # 21 estrelas
 	assert_eq(p.power_count("hammer"), 4)
 	assert_eq(p.power_count("swap"), 4)
 	for i in 4:
@@ -149,12 +151,9 @@ func test_powers_start_at_3_and_grow_every_15_stars() -> void:
 	assert_false(p.use_power("hammer"), "sem saldo")
 	assert_eq(p.power_count("hammer"), 0)
 	assert_eq(p.power_count("swap"), 4, "cada poder tem o seu saldo")
-	p.record_result(8, 3)
-	p.record_result(9, 3)
-	p.record_result(10, 3)
-	p.record_result(11, 3)
-	p.record_result(12, 3)  # 30 estrelas
-	assert_eq(p.power_count("hammer"), 1, "ganha mais um ao chegar em 30")
+	for i in 7:
+		p.record_result(10 + i, 3)  # 42 estrelas
+	assert_eq(p.power_count("hammer"), 1, "ganha mais um ao chegar em 42")
 
 
 func test_powers_used_survive_save() -> void:
