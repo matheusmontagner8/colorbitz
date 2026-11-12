@@ -21,7 +21,7 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 32
+theme_override_constants/separation = 26
 
 [node name="Logo" type="HBoxContainer" parent="Center/VBox"]
 unique_name_in_owner = true
@@ -36,7 +36,7 @@ theme_override_constants/separation = 2
 alignment = 1
 
 [node name="Spacer" type="Control" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 
 [node name="PlayButton" type="Button" parent="Center/VBox"]
@@ -45,6 +45,18 @@ custom_minimum_size = Vector2(440, 128)
 layout_mode = 2
 theme_type_variation = &"AccentButton"
 text = "Jogar"
+
+[node name="DailyButton" type="Button" parent="Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 104)
+layout_mode = 2
+text = "Fase diária"
+
+[node name="AchievementsButton" type="Button" parent="Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 104)
+layout_mode = 2
+text = "Conquistas"
 
 [node name="OptionsButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true

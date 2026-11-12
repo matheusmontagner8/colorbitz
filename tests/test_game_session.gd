@@ -215,3 +215,28 @@ func test_end_bonus_skips_gems_and_holes() -> void:
 	var cells := s.play_end_bonus(RandomNumberGenerator.new())
 	assert_eq(cells.size(), 2, "só os dois blocos coloridos")
 	assert_eq(s.board.count_color(s.board.GEM), 1)
+
+
+func test_stats_for_achievements() -> void:
+	var s := _session(["1122", "1133"], 5, {"type": "score", "target": 200})
+	s.tap(0, 0)
+	var st := s.take_stats()
+	assert_eq(st.get("blocks"), 4)
+	assert_eq(st.get("best_group"), 4)
+	assert_true(s.take_stats().is_empty(), "take_stats zera o acumulador")
+	s.tap(0, 0)  # as colunas vazias fecharam: o 22 está na coluna 0
+	st = s.take_stats()
+	assert_eq(st.get("wins"), 1)
+	assert_eq(st.get("wins_no_power"), 1)
+
+
+func test_power_win_does_not_count_as_no_power() -> void:
+	var s := _session(["11S2", "1132"], 5, {"type": "score", "target": 60})
+	var r := s.use_hammer(2, 0)
+	assert_eq(r.get("stones"), 1, "martelo quebrou uma pedra")
+	s.tap(0, 0)
+	var st := s.take_stats()
+	assert_eq(st.get("powers"), 1)
+	assert_eq(st.get("stones"), 1)
+	assert_eq(st.get("wins"), 1)
+	assert_false(st.has("wins_no_power"))

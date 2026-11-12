@@ -15,6 +15,9 @@ antes de acabarem as jogadas.
   <img src="docs/specials.png" width="200" alt="Tabuleiro com formato, pedras e gelo">
   <img src="docs/gems.png" width="200" alt="Joia, coringa, pedra e gelo">
   <img src="docs/result.png" width="200" alt="Resultado da fase">
+  <img src="docs/daily_reward.png" width="200" alt="Recompensa diária">
+  <img src="docs/daily_result.png" width="200" alt="Resultado da fase diária">
+  <img src="docs/achievements.png" width="200" alt="Conquistas">
 </p>
 
 > Projeto em desenvolvimento: este é o MVP do meu primeiro jogo para Android.
@@ -46,6 +49,14 @@ antes de acabarem as jogadas.
   tocar em **Embaralhar** (grátis, só aparece com o tabuleiro travado); sem poderes, o tabuleiro
   é embaralhado automaticamente.
 - **Bônus de vitória**: cada jogada que sobrou estoura um bloco e vale +100 pontos.
+- **Recompensa diária**: abrir o jogo todo dia dá um poder (dias ímpares Martelo, pares Troca);
+  o 7º dia seguido vale 2 de cada. Pular um dia recomeça a sequência.
+- **Fase diária**: um tabuleiro por dia, igual para todo mundo (semente pela data no horário de
+  Brasília). Cada dia da semana tem um tema (pedras, coringas, gelo, joias, ampulheta, meta dupla,
+  limpeza). Pode repetir à vontade; a primeira vitória do dia dá +1 Martelo e +1 Troca e o jogo
+  guarda o recorde do dia.
+- **Conquistas** (15): por exemplo "criar 25 bombas", "vencer 10 fases sem usar poderes",
+  "vencer 7 fases diárias". Cada uma dá poderes e aparece num aviso na hora em que é liberada.
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
   Cada vitória libera a fase seguinte (60 fases). As fases 10, 20, 30, 40, 50 e 60 são
@@ -102,6 +113,7 @@ godot --path . -s tools/screenshot.gd
 
 ```bash
 godot --headless --path . -s tools/balance.gd -- 300
+godot --headless --path . -s tools/balance.gd -- 300 daily   # modelos da fase diária
 ```
 
 ### Regerar os sons
@@ -116,8 +128,8 @@ godot --headless --path . -s tools/generate_audio.gd
 assets/    tema, fonte e áudio gerado
 data/      fases (levels.json)
 docs/      imagens do README
-scenes/    cenas: menu, seleção de fases, opções e jogo
-scripts/   lógica pura (board, game_session, progress, level_loader),
+scenes/    cenas: menu, seleção de fases, conquistas, opções e jogo
+scripts/   lógica pura (board, game_session, progress, level_loader, daily, achievements),
            autoloads GameState e Audio, telas (game_view, ui/) e efeitos (fx)
 tests/     testes da lógica e executor
 tools/     teste de fumaça, simulador de dificuldade e gerador de áudio
@@ -128,6 +140,8 @@ tools/     teste de fumaça, simulador de dificuldade e gerador de áudio
 - [x] **Semana 1**: tabuleiro, remoção de grupos, gravidade, pontuação e testes
 - [x] **Semana 2**: menu, seleção de fases, pausa, resultado, 30 fases em JSON e progresso salvo
 - [x] **Semana 3**: visual neon, partículas, combos, vibração, sons, músicas e fases rebalanceadas
+- [x] **Extras**: poderes, blocos especiais, novas metas, tabuleiros com formato,
+      recompensa e fase diária, conquistas
 - [ ] Teste em celular Android real
 - [ ] **Semana 4**: anúncios e publicação na Google Play (teste fechado)
 

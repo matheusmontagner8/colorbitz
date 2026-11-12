@@ -5,6 +5,8 @@
 extends SceneTree
 
 const Progress = preload("res://scripts/progress.gd")
+## Dia fixo (12/11/2026) para as capturas da fase diária saírem sempre iguais.
+const DEMO_DAY := 20769
 
 var _gs: Node
 
@@ -19,6 +21,11 @@ func _initialize() -> void:
 	var demo_stars := [3, 2, 2, 3, 1, 2, 2, 2, 1]
 	for i in demo_stars.size():
 		demo.record_result(i + 1, demo_stars[i])
+	_gs.day_override = DEMO_DAY
+	demo.daily_claim_day = DEMO_DAY  # recompensa de hoje já resgatada: menu sem o popup
+	demo.daily_streak = 2
+	demo.stats = {"bombs_created": 1, "best_group": 11, "blocks": 420, "ice": 12, "powers": 4, "wins_no_power": 6, "wins": 9}
+	demo.achievements = {"primeira_bomba": true}
 	_gs.progress = demo
 
 	await _shot("res://scenes/main_menu.tscn", "res://docs/menu.png")
@@ -78,7 +85,9 @@ func _initialize() -> void:
 	print("bomba criada e explodida: ok")
 
 	# Poderes especiais: 18 estrelas de demonstração: ainda só os 3 iniciais (o próximo vem com 21).
-	assert(_gs.power_count("hammer") == 3 and _gs.power_count("swap") == 3, "saldo inicial dos poderes")
+	var h0: int = _gs.power_count("hammer")
+	var s0: int = _gs.power_count("swap")
+	assert(h0 >= 3 and s0 >= 3, "saldo inicial dos poderes")
 	var moves: int = game._session.moves_left
 	var blocks_before: int = game._session.board.count_blocks()
 	game._toggle_power("hammer")
@@ -89,7 +98,7 @@ func _initialize() -> void:
 	await create_timer(0.9).timeout
 	assert(b.count_blocks() == blocks_before - 1, "martelo destrói um bloco")
 	assert(game._session.moves_left == moves, "martelo não gasta jogada")
-	assert(_gs.power_count("hammer") == 2 and game._power == "", "martelo gasto e modo desligado")
+	assert(_gs.power_count("hammer") == h0 - 1 and game._power == "", "martelo gasto e modo desligado")
 	# Troca: dois blocos de cores diferentes.
 	var a := Vector2i(0, b.height - 1)
 	var c := Vector2i(b.width - 1, b.height - 1)
@@ -104,7 +113,7 @@ func _initialize() -> void:
 	_tap(game, c)
 	await create_timer(0.6).timeout
 	assert(b.get_cell(a.x, a.y) == color_c and b.get_cell(c.x, c.y) == color_a, "troca no tabuleiro")
-	assert(game._session.moves_left == moves and _gs.power_count("swap") == 2, "troca gasta o poder, não a jogada")
+	assert(game._session.moves_left == moves and _gs.power_count("swap") == s0 - 1, "troca gasta o poder, não a jogada")
 	for p in game._blocks:
 		assert(game._blocks[p].color_index == b.get_cell(p.x, p.y), "visual diferente do tabuleiro em %s" % p)
 	assert(game._board_root.get_child_count() == game._blocks.size(), "blocos órfãos após os poderes")
@@ -129,7 +138,7 @@ func _initialize() -> void:
 	game._shuffle_button.pressed.emit()  # embaralha sem gastar poder
 	await create_timer(1.0).timeout
 	assert(not game._shuffle_button.visible and not game._session.is_stuck(), "botão embaralhou e sumiu")
-	assert(_gs.power_count("hammer") == 2 and _gs.power_count("swap") == 2, "embaralhar não gasta poder")
+	assert(_gs.power_count("hammer") == h0 - 1 and _gs.power_count("swap") == s0 - 1, "embaralhar não gasta poder")
 	game._shuffle_button.pressed.emit()  # destravado: o botão não faz nada
 	await _frames(2)
 	assert(not game._busy, "embaralhar só funciona com o tabuleiro travado")
@@ -194,6 +203,55 @@ func _initialize() -> void:
 	assert(game._result_overlay.visible, "resultado aparece depois do bônus")
 	print("bônus de fim de fase: ok")
 	await _save("res://docs/result.png")
+
+	# Fase diária: mesmo tabuleiro para todos no dia; vencer dá +1 de cada poder
+	# e libera a conquista "Desafio do dia" (aviso no topo).
+	var progress = _gs.progress
+	_gs.start_daily()
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(5)
+	game = current_scene
+	assert(game._level_label.text == "Fase diária", "título da fase diária")
+	assert(game._session.board.to_rows() == game.LevelLoader.build_session(_gs.current_level()).board.to_rows(), "tabuleiro do dia é fixo")
+	await _save("res://docs/daily.png")
+	var swaps: int = _gs.power_count("swap")
+	game._session.status = game.GameSession.Status.WON
+	game._session.score = 1300
+	game._finish()
+	await _frames(2)
+	assert(progress.daily_won_today(DEMO_DAY) and progress.has_achievement("desafio_do_dia"), "vitória diária registrada")
+	assert(_gs._toast_layer.get_child_count() == 1, "aviso da conquista")
+	assert(_gs.power_count("swap") == swaps + 2, "+1 Troca da vitória e +1 da conquista")
+	await create_timer(1.2).timeout
+	await _save("res://docs/toast.png")
+	await create_timer(3.5).timeout
+	assert(game._result_overlay.visible and not game._next_button.visible, "sem próxima fase na diária")
+	assert(game._back_button.text == "Menu" and game._gate_label.text.begins_with("Recorde de hoje"), "resultado da diária")
+	assert(progress.daily_best_today(DEMO_DAY) == game._session.score, "recorde inclui o bônus")
+	await _save("res://docs/daily_result.png")
+	print("fase diária: ok")
+
+	# Recompensa diária: abriu o jogo no dia seguinte, 3º dia seguido.
+	await create_timer(0.5).timeout
+	_gs.day_override = DEMO_DAY + 1
+	var hammers: int = _gs.power_count("hammer")
+	change_scene_to_file("res://scenes/main_menu.tscn")
+	await _frames(6)
+	var menu = current_scene
+	assert(menu.reward_overlay != null, "popup da recompensa diária")
+	assert(menu.get_node("%DailyButton").text.begins_with("Fase diária: "), "nova fase diária no dia seguinte")
+	await _save("res://docs/daily_reward.png")
+	menu._claim_reward()
+	await create_timer(0.5).timeout
+	assert(_gs.power_count("hammer") == hammers + 1 and progress.daily_streak == 3, "recompensa resgatada")
+	assert(not progress.can_claim_daily(DEMO_DAY + 1), "só uma vez por dia")
+	print("recompensa diária: ok")
+
+	change_scene_to_file("res://scenes/achievements.tscn")
+	await _frames(6)
+	assert(current_scene.get_node("%List").get_child_count() == current_scene.Achievements.LIST.size(), "lista de conquistas")
+	await _save("res://docs/achievements.png")
+	print("conquistas: ok")
 	print("captura concluída")
 	quit()
 

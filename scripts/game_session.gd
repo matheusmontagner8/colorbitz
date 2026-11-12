@@ -28,6 +28,12 @@ var status: Status = Status.PLAYING
 var star_thresholds: Array = DEFAULT_STAR_THRESHOLDS.duplicate()
 ## Pontos ganhos no bônus de fim de fase (já somados em score).
 var end_bonus := 0
+## Poderes usados nesta partida (para "vencer sem poderes").
+var powers_spent := 0
+## Estatísticas acumuladas desde o último [method take_stats] (para as
+## conquistas): blocks, bombs_created, bombs_exploded, gems, ice, stones,
+## powers, best_group, wins, wins_no_power.
+var stats: Dictionary = {}
 
 
 func setup(p_board, p_max_moves: int, p_goal: Dictionary) -> void:
@@ -40,6 +46,8 @@ func setup(p_board, p_max_moves: int, p_goal: Dictionary) -> void:
 	gems_collected = 0
 	initial_blocks = board.count_blocks()
 	end_bonus = 0
+	powers_spent = 0
+	stats = {}
 	status = Status.PLAYING
 	_update_status()
 
@@ -64,6 +72,7 @@ func use_hammer(x: int, y: int) -> Dictionary:
 	if result.is_empty():
 		return result
 	result["power"] = "hammer"
+	_spend_power()
 	return _apply(result)
 
 
@@ -71,8 +80,26 @@ func use_hammer(x: int, y: int) -> Dictionary:
 func use_swap(a: Vector2i, b: Vector2i) -> bool:
 	if status != Status.PLAYING or not board.swap(a, b):
 		return false
+	_spend_power()
 	_update_status()
 	return true
+
+
+func _spend_power() -> void:
+	powers_spent += 1
+	_count("powers", 1)
+
+
+## Entrega as estatísticas acumuladas e zera o acumulador.
+func take_stats() -> Dictionary:
+	var s := stats
+	stats = {}
+	return s
+
+
+func _count(key: String, n: int) -> void:
+	if n > 0:
+		stats[key] = int(stats.get(key, 0)) + n
 
 
 func _apply(result: Dictionary) -> Dictionary:
@@ -81,7 +108,20 @@ func _apply(result: Dictionary) -> Dictionary:
 	for color in colors:
 		removed_by_color[int(color)] = int(removed_by_color.get(int(color), 0)) + int(colors[color])
 	gems_collected += result.get("gems", []).size()
+	_count("blocks", int(result.size))
+	_count("gems", result.get("gems", []).size())
+	_count("ice", result.get("iced", []).size())
+	_count("stones", int(result.get("stones", 0)))
+	_count("bombs_exploded", result.get("exploded", []).size())
+	if result.get("bomb") != null:
+		_count("bombs_created", 1)
+	if not result.has("power") and result.get("exploded", []).is_empty():
+		stats["best_group"] = maxi(int(stats.get("best_group", 0)), int(result.size))
+	var was_playing := status == Status.PLAYING
 	_update_status()
+	if was_playing and status == Status.WON:
+		_count("wins", 1)
+		_count("wins_no_power", 1 if powers_spent == 0 else 0)
 	result["status"] = status
 	return result
 

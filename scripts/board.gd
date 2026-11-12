@@ -337,15 +337,20 @@ func _explode(x: int, y: int) -> Dictionary:
 	var removed: Array[Vector2i] = area.cells
 	var removed_colors := {}
 	var destroyed := 0
+	var stones := 0
 	for p in removed:
 		var c := get_cell(p.x, p.y)
 		if is_color(c):
 			removed_colors[c] = int(removed_colors.get(c, 0)) + 1
 		if c != BOMB:
 			destroyed += 1
+		if c == STONE:
+			stones += 1
 		clear_cell(p.x, p.y)
 	var none: Array[Vector2i] = []
-	return _result(BOMB, destroyed, removed, removed_colors, destroyed * BOMB_POINTS_PER_BLOCK, null, area.bombs, none)
+	var result := _result(BOMB, destroyed, removed, removed_colors, destroyed * BOMB_POINTS_PER_BLOCK, null, area.bombs, none)
+	result["stones"] = stones
+	return result
 
 
 ## Poder "Martelo": destrói um único bloco, sem precisar de grupo (inclusive
@@ -360,7 +365,9 @@ func smash(x: int, y: int) -> Dictionary:
 	clear_cell(x, y)
 	var removed: Array[Vector2i] = [Vector2i(x, y)]
 	var none: Array[Vector2i] = []
-	return _result(c, 1, removed, {c: 1} if is_color(c) else {}, BOMB_POINTS_PER_BLOCK, null, [], none)
+	var result := _result(c, 1, removed, {c: 1} if is_color(c) else {}, BOMB_POINTS_PER_BLOCK, null, [], none)
+	result["stones"] = 1 if c == STONE else 0
+	return result
 
 
 ## Poder "Troca": troca dois blocos de lugar (o gelo vai junto).

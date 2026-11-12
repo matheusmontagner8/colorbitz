@@ -2,6 +2,9 @@
 ## Lógica pura: não depende de cenas, por isso é testável.
 extends RefCounted
 
+const Daily = preload("res://scripts/daily.gd")
+const Achievements = preload("res://scripts/achievements.gd")
+
 const SAVE_VERSION := 1
 
 ## id da fase (String) -> melhor número de estrelas (1..3)
@@ -17,6 +20,21 @@ const POWERS := ["hammer", "swap"]
 const POWER_START := 3
 const POWER_STARS_STEP := 21
 var powers_used: Dictionary = {}
+## Poderes extras ganhos fora das estrelas (recompensa diária, fase diária, conquistas).
+var powers_bonus: Dictionary = {}
+
+## Recompensa diária: último dia resgatado (Daily.day_number) e dias seguidos.
+var daily_claim_day := -1
+var daily_streak := 0
+## Fase diária: dia da última vitória e melhor pontuação do dia.
+var daily_won_day := -1
+var daily_best_day := -1
+var daily_best_score := 0
+
+## Contadores para as conquistas (veja [method add_stats]).
+var stats: Dictionary = {}
+## id da conquista -> true
+var achievements: Dictionary = {}
 
 
 ## Normaliza o id da fase: o JSON devolve números como float (1.0) e
@@ -87,7 +105,14 @@ func powers_granted() -> int:
 
 ## Saldo atual do poder (nunca negativo).
 func power_count(power: String) -> int:
-	return maxi(0, powers_granted() - int(powers_used.get(power, 0)))
+	return maxi(0, powers_granted() + int(powers_bonus.get(power, 0)) - int(powers_used.get(power, 0)))
+
+
+## Soma poderes extras, ex.: {"hammer": 1, "swap": 2}.
+func add_powers(reward: Dictionary) -> void:
+	for power in reward:
+		if power in POWERS:
+			powers_bonus[power] = int(powers_bonus.get(power, 0)) + int(reward[power])
 
 
 ## Gasta um poder. Retorna false se o saldo for zero.
@@ -103,11 +128,117 @@ func stars_to_next_power() -> int:
 	return POWER_STARS_STEP - total_stars() % POWER_STARS_STEP
 
 
+# --- Recompensa e fase diária -------------------------------------------------
+
+## Pode resgatar a recompensa de hoje? (Relógio voltado para trás não ganha.)
+func can_claim_daily(day: int) -> bool:
+	return day > daily_claim_day
+
+
+## Streak que o jogador terá ao resgatar hoje (para mostrar antes de resgatar).
+func streak_if_claimed(day: int) -> int:
+	return daily_streak + 1 if day == daily_claim_day + 1 else 1
+
+
+## Resgata a recompensa do dia. Retorna os poderes ganhos ({} se já resgatou).
+func claim_daily(day: int) -> Dictionary:
+	if not can_claim_daily(day):
+		return {}
+	daily_streak = streak_if_claimed(day)
+	daily_claim_day = day
+	add_stats({"best_streak": daily_streak})
+	var reward := Daily.reward_for_streak(daily_streak)
+	add_powers(reward)
+	return reward
+
+
+func daily_won_today(day: int) -> bool:
+	return daily_won_day == day
+
+
+## Melhor pontuação na fase diária de hoje (0 se ainda não jogou).
+func daily_best_today(day: int) -> int:
+	return daily_best_score if daily_best_day == day else 0
+
+
+func update_daily_best(day: int, score: int) -> void:
+	if daily_best_day != day:
+		daily_best_day = day
+		daily_best_score = 0
+	daily_best_score = maxi(daily_best_score, score)
+
+
+## Registra uma vitória na fase diária. Só a primeira do dia dá recompensa.
+## Retorna quantos de cada poder o jogador ganhou.
+func record_daily_win(day: int, score: int) -> int:
+	update_daily_best(day, score)
+	if daily_won_day == day:
+		return 0
+	daily_won_day = day
+	add_stats({"daily_wins": 1})
+	add_powers(Daily.DAILY_WIN_REWARD)
+	return int(Daily.DAILY_WIN_REWARD.hammer)
+
+
+# --- Estatísticas e conquistas -------------------------------------------------
+
+## Soma contadores; chaves que começam com "best_" guardam o maior valor.
+func add_stats(delta: Dictionary) -> void:
+	for key in delta:
+		var v := int(delta[key])
+		if String(key).begins_with("best_"):
+			stats[key] = maxi(int(stats.get(key, 0)), v)
+		else:
+			stats[key] = int(stats.get(key, 0)) + v
+
+
+## Valor usado pelas conquistas: contadores salvos ou calculados do progresso.
+func stat_value(stat: String) -> int:
+	match stat:
+		"three_stars":
+			var n := 0
+			for v in stars.values():
+				n += 1 if int(v) == 3 else 0
+			return n
+		"max_level":
+			var best := 0
+			for key in stars:
+				if int(stars[key]) > 0 and String(key).is_valid_int():
+					best = maxi(best, int(key))
+			return best
+		"streak":  # maior sequência de dias seguidos já alcançada
+			return int(stats.get("best_streak", 0))
+	return int(stats.get(stat, 0))
+
+
+func has_achievement(id: String) -> bool:
+	return achievements.has(id)
+
+
+## Libera as conquistas cumpridas (e dá os poderes de cada uma).
+## Retorna as recém-liberadas, na ordem de Achievements.LIST.
+func check_achievements() -> Array:
+	var unlocked := []
+	for a in Achievements.LIST:
+		if not achievements.has(a.id) and stat_value(a.stat) >= int(a.goal):
+			achievements[a.id] = true
+			add_powers(a.reward)
+			unlocked.append(a)
+	return unlocked
+
+
 func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
 		"stars": stars.duplicate(),
 		"powers_used": powers_used.duplicate(),
+		"powers_bonus": powers_bonus.duplicate(),
+		"daily": {
+			"claim_day": daily_claim_day, "streak": daily_streak, "won_day": daily_won_day,
+			"best_day": daily_best_day, "best_score": daily_best_score,
+		},
+		"stats": stats.duplicate(),
+		"achievements": achievements.keys(),
 		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on},
 	}
 
@@ -124,6 +255,31 @@ func from_dict(data: Dictionary) -> void:
 		for key in used:
 			if str(key) in POWERS:
 				powers_used[str(key)] = maxi(0, int(used[key]))
+	powers_bonus = {}
+	var bonus = data.get("powers_bonus", {})
+	if typeof(bonus) == TYPE_DICTIONARY:
+		for key in bonus:
+			if str(key) in POWERS:
+				powers_bonus[str(key)] = maxi(0, int(bonus[key]))
+	var daily = data.get("daily", {})
+	if typeof(daily) != TYPE_DICTIONARY:
+		daily = {}
+	daily_claim_day = int(daily.get("claim_day", -1))
+	daily_streak = maxi(0, int(daily.get("streak", 0)))
+	daily_won_day = int(daily.get("won_day", -1))
+	daily_best_day = int(daily.get("best_day", -1))
+	daily_best_score = maxi(0, int(daily.get("best_score", 0)))
+	stats = {}
+	var saved_stats = data.get("stats", {})
+	if typeof(saved_stats) == TYPE_DICTIONARY:
+		for key in saved_stats:
+			stats[str(key)] = maxi(0, int(saved_stats[key]))
+	achievements = {}
+	var saved_ach = data.get("achievements", [])
+	if typeof(saved_ach) == TYPE_ARRAY:
+		for id in saved_ach:
+			if not Achievements.find(str(id)).is_empty():
+				achievements[str(id)] = true
 	var settings = data.get("settings", {})
 	if typeof(settings) == TYPE_DICTIONARY:
 		sound_on = bool(settings.get("sound", true))

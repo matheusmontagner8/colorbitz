@@ -166,3 +166,73 @@ func test_powers_used_survive_save() -> void:
 	q.from_dict({"powers_used": {"swap": -4, "hacker": 9}})
 	assert_eq(q.power_count("swap"), 3, "valores inválidos são ignorados")
 	assert_eq(q.powers_used.keys(), ["swap"])
+
+
+func test_daily_reward_once_per_day_and_streak() -> void:
+	var p := Progress.new()
+	var start := p.power_count("hammer")
+	assert_true(p.can_claim_daily(100))
+	assert_eq(p.claim_daily(100), {"hammer": 1})
+	assert_eq(p.power_count("hammer"), start + 1, "bônus soma no saldo")
+	assert_eq(p.claim_daily(100), {}, "só uma vez por dia")
+	assert_eq(p.claim_daily(101), {"swap": 1})
+	assert_eq(p.daily_streak, 2)
+	assert_false(p.can_claim_daily(99), "relógio para trás não ganha")
+	p.claim_daily(105)
+	assert_eq(p.daily_streak, 1, "pulou dias: recomeça")
+	assert_eq(p.stat_value("streak"), 2, "guarda a maior sequência")
+
+
+func test_daily_win_rewards_only_first_win_of_day() -> void:
+	var p := Progress.new()
+	var swaps := p.power_count("swap")
+	assert_eq(p.record_daily_win(50, 900), 1)
+	assert_eq(p.record_daily_win(50, 1200), 0, "segunda vitória no mesmo dia")
+	assert_eq(p.power_count("swap"), swaps + 1)
+	assert_eq(p.daily_best_today(50), 1200)
+	assert_eq(p.daily_best_today(51), 0)
+	assert_true(p.daily_won_today(50))
+	assert_eq(p.stat_value("daily_wins"), 1)
+
+
+func test_achievements_unlock_once_and_give_powers() -> void:
+	var p := Progress.new()
+	var hammers := p.power_count("hammer")
+	p.add_stats({"bombs_created": 1, "best_group": 9})
+	var first := p.check_achievements()
+	assert_eq(first.size(), 1)
+	assert_eq(first[0].id, "primeira_bomba")
+	assert_eq(p.power_count("hammer"), hammers + 1)
+	assert_true(p.check_achievements().is_empty(), "não libera duas vezes")
+	p.add_stats({"best_group": 7})
+	assert_eq(p.stat_value("best_group"), 9, "best_ guarda o maior")
+	p.add_stats({"best_group": 15})
+	assert_eq(p.check_achievements()[0].id, "mega_grupo")
+
+
+func test_achievements_from_progress() -> void:
+	var p := Progress.new()
+	for i in 30:
+		p.record_result(i + 1, 3 if i < 15 else 1)
+	assert_eq(p.stat_value("three_stars"), 15)
+	assert_eq(p.stat_value("max_level"), 30)
+	var ids := []
+	for a in p.check_achievements():
+		ids.append(a.id)
+	assert_eq(ids, ["perfeccionista", "metade"])
+
+
+func test_daily_stats_and_achievements_saved() -> void:
+	var p := Progress.new()
+	p.claim_daily(10)
+	p.record_daily_win(10, 700)
+	p.add_stats({"gems": 3})
+	p.check_achievements()
+	assert_eq(p.save_to(TEST_PATH), OK)
+	var q := Progress.new()
+	assert_true(q.load_from(TEST_PATH))
+	assert_eq(q.to_dict(), p.to_dict())
+	assert_false(q.can_claim_daily(10))
+	assert_true(q.has_achievement("desafio_do_dia"))
+	assert_eq(q.power_count("hammer"), p.power_count("hammer"))
+	_cleanup()

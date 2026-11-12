@@ -63,6 +63,7 @@ var _result_title: Label
 var _result_stars: StarsView
 var _result_score: Label
 var _next_button: Button
+var _back_button: Button  # "Fases" (ou "Menu" na fase diária)
 var _gate_label: Label
 var _power_label: Label
 var _power_buttons := {}  # "hammer"/"swap" -> PowerButton
@@ -276,7 +277,15 @@ func _build_result_overlay() -> void:
 	_next_button = _make_button(box, "Próxima fase", func(): GameState.play_level(GameState.current_index + 1))
 	_next_button.theme_type_variation = &"AccentButton"
 	_make_button(box, "Tentar de novo", _restart)
-	_make_button(box, "Fases", GameState.go_to_level_select)
+	_back_button = _make_button(box, "Fases", _leave)
+
+
+## Sai da tela de resultado: fase diária volta ao menu; as outras, às fases.
+func _leave() -> void:
+	if GameState.daily_mode:
+		GameState.go_to_menu()
+	else:
+		GameState.go_to_level_select()
 
 
 func _make_label(parent: Node, font_size: int, color: Color) -> Label:
@@ -325,7 +334,7 @@ func _start_level() -> void:
 	_result_overlay.visible = false
 	_pause_button.disabled = false
 	_level_tip = String(GameState.current_level().get("tip", ""))
-	if GameState.current_index == 0:
+	if GameState.current_index == 0 and not GameState.daily_mode:
 		_show_tip(TUTORIAL_TEXT)
 	elif _level_tip != "":
 		_show_tip(_level_tip)
@@ -377,7 +386,7 @@ func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_WM_GO_BACK_REQUEST:  # botão "voltar" do Android
 			if _result_overlay.visible:
-				GameState.go_to_level_select()
+				_leave()
 			elif _pause_overlay.visible:
 				_resume()
 			else:
@@ -451,6 +460,8 @@ func _on_board_input(event: InputEvent) -> void:
 ## tabuleiro travado.
 func _after_move() -> void:
 	_busy = false
+	# Estatísticas das conquistas: soma a cada jogada; no fim da fase, salva.
+	GameState.record_stats(_session.take_stats(), _session.status != GameSession.Status.PLAYING)
 	_shuffle_button.visible = false
 	for p in _blocks:
 		_blocks[p].ice = _session.board.get_ice(p.x, p.y)
@@ -916,7 +927,7 @@ func _show_hint() -> void:
 # --- HUD e resultado ----------------------------------------------------------
 
 func _update_hud() -> void:
-	_level_label.text = "Fase %d" % (GameState.current_index + 1)
+	_level_label.text = "Fase diária" if GameState.daily_mode else "Fase %d" % (GameState.current_index + 1)
 	_update_goal_text()
 	_update_goal_bar()
 	_animate_score()
@@ -1075,7 +1086,7 @@ func _finish() -> void:
 	_power_label.visible = false
 	_pause_button.disabled = true
 	if won:
-		var gained := GameState.complete_current_level(stars)  # salva antes da animação do bônus
+		var gained := GameState.complete_current_level(stars, _session.score)  # salva antes da animação do bônus
 		_power_label.visible = gained > 0
 		_power_label.text = "+%d Martelo e +%d Troca!" % [gained, gained]
 		for pb in _power_buttons.values():
@@ -1084,6 +1095,8 @@ func _finish() -> void:
 		await _play_end_bonus()
 		if gen != _generation:
 			return
+		if GameState.daily_mode:
+			GameState.update_daily_best(_session.score)  # recorde do dia já com o bônus
 		_result_title.text = "Vitória!"
 		Audio.play_sfx("win")
 	else:
@@ -1099,7 +1112,11 @@ func _finish() -> void:
 	var next := GameState.current_index + 1
 	var has_next: bool = won and GameState.has_next_level()
 	_next_button.visible = has_next and GameState.is_unlocked(next)
-	_update_gate_label(next, has_next)
+	_back_button.text = "Menu" if GameState.daily_mode else "Fases"
+	if GameState.daily_mode:
+		_update_daily_label()
+	else:
+		_update_gate_label(next, has_next)
 	_pause_button.disabled = true
 	_result_overlay.modulate.a = 0.0
 	_result_overlay.visible = true
@@ -1111,6 +1128,19 @@ func _finish() -> void:
 		t.tween_callback(func():
 			_result_stars.count = i + 1
 			Audio.play_sfx("star", 1.0 + i * 0.12))
+
+
+## Fase diária: recorde do dia e se o prêmio já foi ganho.
+func _update_daily_label() -> void:
+	var progress = GameState.progress
+	var day: int = GameState.today()
+	_gate_label.visible = true
+	_gate_label.add_theme_color_override("font_color", Color("#FFE53D"))
+	var best: int = progress.daily_best_today(day)
+	if progress.daily_won_today(day):
+		_gate_label.text = "Recorde de hoje: %d pontos.\nAmanhã tem uma fase nova!" % best
+	else:
+		_gate_label.text = "Vença a fase diária para ganhar\n+1 Martelo e +1 Troca."
 
 
 ## Se a próxima fase é um portão de estrelas, avisa se foi liberada ou quantas faltam.
