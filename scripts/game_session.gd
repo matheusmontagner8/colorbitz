@@ -13,9 +13,17 @@ var board  # board.gd
 var score := 0
 var max_moves := 0
 var moves_left := 0
-## {"type": "score", "target": int} ou {"type": "color", "color": int, "count": int}
+## Metas:
+##   {"type": "score", "target": int}                pontos
+##   {"type": "color", "color": int, "count": int}   estourar N blocos de uma cor
+##   {"type": "colors", "targets": {"0": 6, "3": 6}} várias cores ao mesmo tempo
+##   {"type": "clear", "max_left": int}              sobrar no máximo N blocos
+##   {"type": "drop", "count": int}                  levar N joias até o fundo
 var goal: Dictionary = {}
 var removed_by_color: Dictionary = {}
+var gems_collected := 0
+## Blocos no início da fase (para a meta "clear").
+var initial_blocks := 0
 var status: Status = Status.PLAYING
 var star_thresholds: Array = DEFAULT_STAR_THRESHOLDS.duplicate()
 ## Pontos ganhos no bônus de fim de fase (já somados em score).
@@ -29,6 +37,8 @@ func setup(p_board, p_max_moves: int, p_goal: Dictionary) -> void:
 	goal = p_goal
 	score = 0
 	removed_by_color = {}
+	gems_collected = 0
+	initial_blocks = board.count_blocks()
 	end_bonus = 0
 	status = Status.PLAYING
 	_update_status()
@@ -70,6 +80,7 @@ func _apply(result: Dictionary) -> Dictionary:
 	var colors: Dictionary = result.removed_colors
 	for color in colors:
 		removed_by_color[int(color)] = int(removed_by_color.get(int(color), 0)) + int(colors[color])
+	gems_collected += result.get("gems", []).size()
 	_update_status()
 	result["status"] = status
 	return result
@@ -79,17 +90,51 @@ func goal_type() -> String:
 	return String(goal.get("type", "score"))
 
 
-## Valor atual em direção à meta (pontos ou blocos removidos da cor-alvo).
+## Valor atual em direção à meta (sempre comparável com [method goal_target]).
 func goal_progress() -> int:
-	if goal_type() == "color":
-		return int(removed_by_color.get(int(goal.get("color", 0)), 0))
+	match goal_type():
+		"color":
+			return removed_of(int(goal.get("color", 0)))
+		"colors":
+			var total := 0
+			var targets := color_targets()
+			for c in targets:
+				total += mini(removed_of(c), targets[c])
+			return total
+		"clear":
+			return initial_blocks - board.count_blocks()
+		"drop":
+			return gems_collected
 	return score
 
 
 func goal_target() -> int:
-	if goal_type() == "color":
-		return int(goal.get("count", 0))
+	match goal_type():
+		"color":
+			return int(goal.get("count", 0))
+		"colors":
+			var total := 0
+			for n in color_targets().values():
+				total += n
+			return total
+		"clear":
+			return maxi(0, initial_blocks - int(goal.get("max_left", 0)))
+		"drop":
+			return int(goal.get("count", 0))
 	return int(goal.get("target", 0))
+
+
+func removed_of(color: int) -> int:
+	return int(removed_by_color.get(color, 0))
+
+
+## Meta "colors": cor (int) -> quantidade. O JSON traz chaves como texto.
+func color_targets() -> Dictionary:
+	var result := {}
+	var targets = goal.get("targets", {})
+	for key in targets:
+		result[int(key)] = int(targets[key])
+	return result
 
 
 func is_goal_met() -> bool:
@@ -135,7 +180,8 @@ func play_end_bonus(rng: RandomNumberGenerator) -> Array[Vector2i]:
 		return cells
 	for y in board.height:
 		for x in board.width:
-			if board.get_cell(x, y) != board.EMPTY:
+			var c: int = board.get_cell(x, y)
+			if c >= 0 and c != board.GEM:
 				cells.append(Vector2i(x, y))
 	for i in range(cells.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
@@ -144,7 +190,7 @@ func play_end_bonus(rng: RandomNumberGenerator) -> Array[Vector2i]:
 		cells[j] = tmp
 	cells = cells.slice(0, mini(moves_left, cells.size()))
 	for p in cells:
-		board.set_cell(p.x, p.y, board.EMPTY)
+		board.clear_cell(p.x, p.y)
 	end_bonus = cells.size() * END_BONUS_POINTS
 	score += end_bonus
 	return cells

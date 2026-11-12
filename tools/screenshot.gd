@@ -150,6 +150,33 @@ func _initialize() -> void:
 	_gs.progress.powers_used = saved_used
 	print("tabuleiro travado (poderes e embaralhar): ok")
 
+	# Fase 60: formato "janela", pedras e gelo grosso.
+	_gs.current_index = 59
+	game._start_level()
+	await create_timer(0.6).timeout
+	assert(game._session.board.count_color(game._session.board.HOLE) > 0, "fase 60 tem buracos")
+	assert(game._goal_parts.size() == 2, "meta dupla mostra duas cores")
+	await _save("res://docs/specials.png")
+	# Joia e gelo num tabuleiro montado: o grupo de 1 embaixo da joia a leva ao fundo.
+	game._session.goal = {"type": "drop", "count": 5}
+	game._session.board.load_rows([
+		"0123401", "1234012", "2W40123", "3401234", "4S12340",
+		"0123401", "123G012", "2341123", "3401234",
+	])
+	game._session.board.set_ice(2, 8, 2)
+	game._build_goal_row()
+	game._rebuild_blocks()
+	game._update_hud()
+	await _frames(3)
+	await _save("res://docs/gems.png")
+	_tap(game, Vector2i(3, 8))
+	await create_timer(1.3).timeout
+	assert(game._session.gems_collected == 1, "joia coletada")
+	assert(game._session.board.get_ice(2, 8) == 1 and game._blocks[Vector2i(2, 8)].ice == 1, "gelo rachou (visual e tabuleiro)")
+	assert(game._blocks.size() == game._session.board.count_blocks(), "visual e tabuleiro após a joia")
+	assert(game._board_root.get_child_count() == game._blocks.size(), "nó da joia liberado")
+	print("especiais (formato, joia, gelo): ok")
+
 	# Tela de resultado (vitória forçada), com o bônus das jogadas que sobraram.
 	# Vence a fase 9 com 3 estrelas: 18 - 1 + 3 = 20, o que libera o portão da fase 10.
 	_gs.current_index = 8

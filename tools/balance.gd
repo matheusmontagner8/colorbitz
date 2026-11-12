@@ -41,7 +41,7 @@ func _initialize() -> void:
 				random_wins += 1
 		progress.sort()
 		var goal: Dictionary = level.goal
-		var goal_text := "%d pts" % int(goal.target) if goal.type == "score" else "%d cor %d" % [int(goal.count), int(goal.color)]
+		var goal_text := _goal_text(goal)
 		print("%4d %5d %4d  %-16s %5.0f%%  %8.1f  %8.0f%%  %8d  %8.0f%%  %8.2f" % [
 			int(level.id), int(level.colors), int(level.moves), goal_text,
 			100.0 * greedy_wins / runs, float(greedy_stars) / max(greedy_wins, 1),
@@ -81,7 +81,7 @@ var _bombs_made := 0
 ## Joga uma partida. Opções de toque = grupos válidos + bombas no tabuleiro.
 func _play(level: Dictionary, rng: RandomNumberGenerator, greedy: bool):
 	var s = LevelLoader.build_session(level, rng)
-	var target_color := int(level.goal.get("color", -1)) if level.goal.type == "color" else -1
+	var targets := _targets(level.goal)
 	while s.status == GameSession.Status.PLAYING:
 		if s.is_stuck():  # jogador sem poderes: o jogo embaralha de graça
 			s.shuffle(rng)
@@ -94,7 +94,7 @@ func _play(level: Dictionary, rng: RandomNumberGenerator, greedy: bool):
 		if greedy:
 			var best := -1.0
 			for o in options:
-				var v := _value(o, s.board, target_color)
+				var v := _value(o, s, targets)
 				if v > best:
 					best = v
 					pick = o
@@ -104,21 +104,66 @@ func _play(level: Dictionary, rng: RandomNumberGenerator, greedy: bool):
 	return s
 
 
-## Valor de um toque para o guloso: pontos; em meta de cor, prioriza a cor-alvo.
-func _value(p: Vector2i, board, target_color: int) -> float:
+static func _goal_text(goal: Dictionary) -> String:
+	match String(goal.type):
+		"score":
+			return "%d pts" % int(goal.target)
+		"color":
+			return "%d cor %d" % [int(goal.count), int(goal.color)]
+		"colors":
+			var parts := []
+			for c in goal.targets:
+				parts.append("%d×%s" % [int(goal.targets[c]), c])
+			return "cores " + ",".join(parts)
+		"clear":
+			return "sobrar <=%d" % int(goal.max_left)
+		"drop":
+			return "%d joias" % int(goal.count)
+	return "?"
+
+
+## Cores que o guloso deve priorizar (metas de cor).
+static func _targets(goal: Dictionary) -> Array:
+	if goal.type == "color":
+		return [int(goal.color)]
+	if goal.type == "colors":
+		var result := []
+		for c in goal.targets:
+			result.append(int(c))
+		return result
+	return []
+
+
+## Valor de um toque para o guloso: pontos; em meta de cor, prioriza as
+## cores-alvo que ainda faltam; em meta de joias, blocos embaixo de joias.
+func _value(p: Vector2i, s, targets: Array) -> float:
+	var board = s.board
+	var cells: Array = []
+	if board.get_cell(p.x, p.y) == Board.BOMB:
+		cells = board.explosion_area(p.x, p.y).cells
+	else:
+		cells = board.find_group(p.x, p.y)
 	var points := 0.0
 	var on_target := 0
+	var group_color: int = board.get_cell(p.x, p.y)
+	for q in cells:
+		var c: int = board.get_cell(q.x, q.y)
+		if c == Board.WILD:
+			c = group_color
+		if s.goal_type() == "drop" and _below_gem(board, q):
+			on_target += 1
+		elif c in targets and (s.goal_type() == "color" or s.removed_of(c) < int(s.color_targets().get(c, 0))):
+			on_target += 1
 	if board.get_cell(p.x, p.y) == Board.BOMB:
-		for q in board.explosion_area(p.x, p.y).cells:
-			var c: int = board.get_cell(q.x, q.y)
-			if c != Board.BOMB:
-				points += Board.BOMB_POINTS_PER_BLOCK
-				on_target += 1 if c == target_color else 0
+		points = (cells.size() - 1) * Board.BOMB_POINTS_PER_BLOCK
 	else:
-		var n: int = board.find_group(p.x, p.y).size()
-		points = Board.points_for(n)
-		on_target = n if board.get_cell(p.x, p.y) == target_color else 0
-	if target_color >= 0:
-		return on_target * 100000.0 + points
-	return points
+		points = Board.points_for(cells.size())
+	return on_target * 100000.0 + points
+
+
+static func _below_gem(board, q: Vector2i) -> bool:
+	for y in q.y:
+		if board.get_cell(q.x, y) == Board.GEM:
+			return true
+	return false
 

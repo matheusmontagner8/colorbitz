@@ -7,6 +7,11 @@ const GameSession = preload("res://scripts/game_session.gd")
 func test_levels_file_is_valid() -> void:
 	var levels := LevelLoader.load_levels()
 	assert_true(levels.size() > 0, "levels.json deve ter fases")
+	for name in LevelLoader.SHAPES:
+		var shape: Array = LevelLoader.SHAPES[name]
+		assert_eq(shape.size(), 9, "formato %s: 9 linhas" % name)
+		for row in shape:
+			assert_eq(String(row).length(), 7, "formato %s: 7 colunas" % name)
 	for level in levels:
 		var id := str(level.get("id", "?"))
 		for key in ["id", "width", "height", "colors", "moves", "goal"]:
@@ -14,9 +19,16 @@ func test_levels_file_is_valid() -> void:
 		var colors := int(level.get("colors", 0))
 		assert_true(colors >= 2 and colors <= 6, "fase %s: cores entre 2 e 6" % id)
 		var goal: Dictionary = level.get("goal", {})
-		assert_true(goal.get("type") in ["score", "color"], "fase %s: tipo de meta" % id)
+		assert_true(goal.get("type") in ["score", "color", "colors", "clear", "drop"], "fase %s: tipo de meta" % id)
 		if goal.get("type") == "color":
 			assert_true(int(goal.get("color", -1)) < colors, "fase %s: cor da meta existe" % id)
+		if goal.get("type") == "colors":
+			for c in goal.get("targets", {}):
+				assert_true(int(c) < colors, "fase %s: cor %s da meta existe" % [id, c])
+		if goal.get("type") == "drop":
+			assert_true(int(level.get("gems", 0)) >= int(goal.get("count", 0)), "fase %s: joias suficientes" % id)
+		if level.get("mask") is String:
+			assert_true(LevelLoader.SHAPES.has(level.mask), "fase %s: formato %s existe" % [id, level.mask])
 
 
 func test_star_gates_are_reachable_and_increasing() -> void:
@@ -60,3 +72,17 @@ func test_build_session_from_level() -> void:
 	assert_eq(s.status, GameSession.Status.PLAYING)
 	var again = LevelLoader.build_session(level)
 	assert_eq(s.board.to_rows(), again.board.to_rows(), "seed gera o mesmo tabuleiro")
+
+
+func test_build_session_with_specials_and_shape() -> void:
+	var level := {"width": 7, "height": 9, "colors": 5, "moves": 10, "seed": 4, "mask": "ampulheta",
+		"stones": 2, "ice": 3, "ice_hits": 2, "wilds": 1, "gems": 2, "goal": {"type": "drop", "count": 2}}
+	var s = LevelLoader.build_session(level)
+	var b = s.board
+	assert_eq(b.get_cell(0, 3), b.HOLE, "formato ampulheta")
+	assert_false(b.collapse_columns)
+	assert_eq(b.count_color(b.STONE), 2)
+	assert_eq(b.count_color(b.GEM), 2)
+	assert_eq(b.count_color(b.WILD), 1)
+	assert_true(b.has_moves())
+	assert_eq(s.initial_blocks, 63 - 16, "16 buracos na ampulheta")

@@ -12,6 +12,8 @@ antes de acabarem as jogadas.
   <img src="docs/bomb.png" width="200" alt="Bomba criada após um grupo grande">
   <img src="docs/effects.png" width="200" alt="Explosão da bomba">
   <img src="docs/powers.png" width="200" alt="Poderes Martelo e Troca">
+  <img src="docs/specials.png" width="200" alt="Tabuleiro com formato, pedras e gelo">
+  <img src="docs/gems.png" width="200" alt="Joia, coringa, pedra e gelo">
   <img src="docs/result.png" width="200" alt="Resultado da fase">
 </p>
 
@@ -24,7 +26,15 @@ antes de acabarem as jogadas.
 - Os blocos de cima caem e as colunas vazias se fecham para a esquerda.
 - Pontos por jogada: `n × n × 10`, em que `n` é o tamanho do grupo. Grupos maiores valem bem mais,
   e combinações de 6, 9 e 13+ blocos rendem "Ótimo!", "Incrível!" e "Fantástico!".
-- Cada fase tem uma meta (pontuação ou "estourar X blocos de uma cor") e um limite de jogadas.
+- Cada fase tem uma meta e um limite de jogadas. Metas: pontuação, estourar X blocos de uma cor,
+  **duas cores ao mesmo tempo**, **limpar o tabuleiro** (sobrar no máximo N blocos) e
+  **derrubar joias** até o fundo das colunas.
+- **Blocos especiais** (entram aos poucos a partir da fase 13, cada um com uma dica na primeira vez):
+  - **Pedra**: não estoura nem forma grupo; só sai com a bomba ou o Martelo.
+  - **Coringa**: combina com qualquer cor (tocar nele usa a cor vizinha que forma o maior grupo).
+  - **Gelo**: prende um bloco colorido até um grupo estourar ao lado (gelo grosso: duas vezes).
+  - **Joia**: não estoura; é coletada quando chega ao fundo da coluna.
+- **Tabuleiros com formato** (ampulheta, pilares, cantos, janela): os blocos atravessam os buracos ao cair.
 - **Bomba**: estourar um grupo grande (8 blocos nas fases de 3–4 cores, 7 com 5 cores e 6 com 6 cores)
   transforma o bloco tocado numa bomba. Tocar nela gasta uma jogada e explode os blocos em volta
   (área 3×3, 50 pontos por bloco, contam para a meta de cor). Bombas atingidas explodem em cadeia.

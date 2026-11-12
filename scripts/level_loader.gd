@@ -5,6 +5,15 @@ const Board = preload("res://scripts/board.gd")
 const GameSession = preload("res://scripts/game_session.gd")
 
 const LEVELS_PATH := "res://data/levels.json"
+## Formatos de tabuleiro 7x9 usados em "mask" (pelo nome). "#" célula, "." buraco.
+const SHAPES := {
+	"ampulheta": ["#######", "#######", ".#####.", "..###..", "..###..", "..###..", ".#####.", "#######", "#######"],
+	"pilares": ["#######", "#######", "#######", "#######", "#.#.#.#", "#.#.#.#", "#######", "#######", "#######"],
+	"cantos": ["..###..", ".#####.", "#######", "#######", "#######", "#######", "#######", ".#####.", "..###.."],
+	"janela": ["#######", "#######", "##...##", "##...##", "#######", "#######", "##...##", "##...##", "#######"],
+}
+## Chaves do levels.json com os especiais da fase (veja Board.place_specials).
+const SPECIAL_KEYS := ["gems", "stones", "wilds", "ice", "ice_hits"]
 
 
 static func load_levels(path: String = LEVELS_PATH) -> Array:
@@ -29,7 +38,18 @@ static func build_session(level: Dictionary, rng: RandomNumberGenerator = null):
 			rng.randomize()
 	var board = Board.new(int(level.get("width", 7)), int(level.get("height", 9)))
 	var colors := int(level.get("colors", 4))
+	var mask = level.get("mask")
+	if mask is String:
+		mask = SHAPES.get(mask)
+	if mask is Array:
+		board.apply_mask(mask)
 	board.fill_random(colors, rng)
+	var spec := {}
+	for key in SPECIAL_KEYS:
+		if level.has(key):
+			spec[key] = int(level[key])
+	if not spec.is_empty():
+		board.place_specials(spec, rng)
 	# "bomb_group" opcional no levels.json; senão, depende do número de cores.
 	board.bomb_group_size = int(level.get("bomb_group", Board.bomb_size_for_colors(colors)))
 	var session = GameSession.new()

@@ -179,3 +179,39 @@ func test_swap_is_free_and_can_create_a_group() -> void:
 	assert_eq(s.board.to_rows(), ["13", "12", "44"])
 	assert_eq(s.moves_left, 5)
 	assert_false(s.use_swap(Vector2i(0, 0), Vector2i(0, 0)))
+
+
+func test_colors_goal_needs_every_color() -> void:
+	var s := _session(["1122", "1133", "4433"], 10, {"type": "colors", "targets": {"1": 4, "3": 2}})
+	assert_eq(s.goal_target(), 6)
+	s.tap(0, 0)
+	assert_eq(s.goal_progress(), 4)
+	assert_eq(s.status, GameSession.Status.PLAYING, "falta a cor 3")
+	s.tap(2, 2)  # 4 blocos da cor 3: conta só 2 (o que a meta pede)
+	assert_eq(s.goal_progress(), 6)
+	assert_eq(s.status, GameSession.Status.WON)
+
+
+func test_clear_goal() -> void:
+	var s := _session(["112", "334"], 10, {"type": "clear", "max_left": 2})
+	assert_eq(s.goal_target(), 4)
+	s.tap(0, 0)
+	assert_eq(s.status, GameSession.Status.PLAYING)
+	s.tap(0, 1)
+	assert_eq(s.board.count_blocks(), 2)
+	assert_eq(s.status, GameSession.Status.WON, "sobraram 2 blocos")
+
+
+func test_drop_goal_counts_gems() -> void:
+	var s := _session(["G2", "12", "13"], 10, {"type": "drop", "count": 1})
+	s.tap(0, 1)
+	assert_eq(s.gems_collected, 1)
+	assert_eq(s.status, GameSession.Status.WON)
+
+
+func test_end_bonus_skips_gems_and_holes() -> void:
+	var s := _session(["11", "Gx", "23"], 10, {"type": "score", "target": 40})
+	s.tap(0, 0)
+	var cells := s.play_end_bonus(RandomNumberGenerator.new())
+	assert_eq(cells.size(), 2, "só os dois blocos coloridos")
+	assert_eq(s.board.count_color(s.board.GEM), 1)

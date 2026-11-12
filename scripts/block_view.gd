@@ -12,15 +12,28 @@ const COLORS: Array[Color] = [
 	Color("#FF3B3B"),  # vermelho  ✚ cruz
 ]
 const COLOR_NAMES: Array[String] = ["azuis", "roxos", "verdes", "rosa", "amarelos", "vermelhos"]
-## Bomba (mesmo valor de Board.BOMB) e sua cor neon laranja.
-const BOMB := preload("res://scripts/board.gd").BOMB
+const Board = preload("res://scripts/board.gd")
+## Especiais (mesmos valores do Board) e suas cores.
+const BOMB := Board.BOMB
+const STONE := Board.STONE
+const WILD := Board.WILD
+const GEM := Board.GEM
 const BOMB_COLOR := Color("#FF8A3D")
 const SPARK_COLOR := Color("#FFE53D")
+const STONE_COLOR := Color("#8A93B8")
+const WILD_COLOR := Color("#FFFFFF")
+const GEM_COLOR := Color("#7DF9FF")
+const ICE_COLOR := Color("#BDEBFF")
 
 var color_index := 0:
 	set(value):
 		color_index = value
-		set_process(value == BOMB)  # só a bomba é animada (pavio piscando)
+		set_process(_animated())
+		queue_redraw()
+## Camada de gelo por cima do bloco (0 = sem gelo, 1 = rachado, 2 = inteiro).
+var ice := 0:
+	set(value):
+		ice = value
 		queue_redraw()
 
 var _style := StyleBoxFlat.new()
@@ -31,7 +44,12 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_style.anti_aliasing = true
 	resized.connect(func(): pivot_offset = size / 2.0)
-	set_process(color_index == BOMB)
+	set_process(_animated())
+
+
+## Bomba (pavio), coringa (arco-íris girando) e joia (brilho) são animados.
+func _animated() -> bool:
+	return color_index in [BOMB, WILD, GEM]
 
 
 func _process(delta: float) -> void:
@@ -40,15 +58,35 @@ func _process(delta: float) -> void:
 
 
 static func color_of(index: int) -> Color:
-	if index == BOMB:
-		return BOMB_COLOR
+	match index:
+		BOMB:
+			return BOMB_COLOR
+		STONE:
+			return STONE_COLOR
+		WILD:
+			return WILD_COLOR
+		GEM:
+			return GEM_COLOR
 	return COLORS[index % COLORS.size()]
 
 
 func _draw() -> void:
-	if color_index == BOMB:
-		_draw_bomb()
-		return
+	match color_index:
+		BOMB:
+			_draw_bomb()
+		STONE:
+			_draw_stone()
+		WILD:
+			_draw_wild()
+		GEM:
+			_draw_gem()
+		_:
+			_draw_color_block()
+	if ice > 0:
+		_draw_ice()
+
+
+func _draw_color_block() -> void:
 	var col := color_of(color_index)
 	var pad := size.x * 0.08
 	_style.bg_color = col.darkened(0.6)
@@ -128,3 +166,97 @@ static func _spark_points(c: Vector2, s: float) -> PackedVector2Array:
 		var rr := s if i % 2 == 0 else s * 0.4
 		pts.append(c + Vector2.from_angle(i * PI / 4.0 + PI / 8.0) * rr)
 	return pts
+
+
+func _box_rect() -> Rect2:
+	var pad := size.x * 0.08
+	return Rect2(Vector2(pad, pad), size - Vector2(pad, pad) * 2.0)
+
+
+## Pedra: bloco cinza fosco, sem brilho, com rachaduras.
+func _draw_stone() -> void:
+	_style.bg_color = Color("#2A2F45")
+	_style.border_color = STONE_COLOR
+	_style.set_border_width_all(maxi(2, int(size.x * 0.05)))
+	_style.set_corner_radius_all(int(size.x * 0.14))
+	_style.shadow_color = Color(0, 0, 0, 0.5)
+	_style.shadow_size = int(size.x * 0.05)
+	draw_style_box(_style, _box_rect())
+	var k := size.x
+	var w := maxf(1.5, k * 0.035)
+	var crack := Color(STONE_COLOR, 0.8)
+	draw_polyline(PackedVector2Array([Vector2(0.3, 0.2) * k, Vector2(0.42, 0.42) * k, Vector2(0.35, 0.58) * k, Vector2(0.48, 0.8) * k]), crack, w, true)
+	draw_polyline(PackedVector2Array([Vector2(0.42, 0.42) * k, Vector2(0.66, 0.36) * k, Vector2(0.78, 0.5) * k]), crack, w, true)
+	draw_circle(Vector2(0.7, 0.72) * k, k * 0.05, Color(STONE_COLOR, 0.5))
+	draw_circle(Vector2(0.26, 0.74) * k, k * 0.035, Color(STONE_COLOR, 0.4))
+
+
+## Coringa: borda com as 6 cores girando e uma estrela branca no meio.
+func _draw_wild() -> void:
+	var r := _box_rect()
+	_style.bg_color = Color("#1A1433")
+	_style.border_color = Color(1, 1, 1, 0.25)
+	_style.set_border_width_all(maxi(1, int(size.x * 0.02)))
+	_style.set_corner_radius_all(int(size.x * 0.2))
+	_style.shadow_color = Color(1, 1, 1, 0.25)
+	_style.shadow_size = int(size.x * 0.1)
+	draw_style_box(_style, r)
+	var c := size / 2.0
+	var ring := size.x * 0.33
+	var w := maxf(2.0, size.x * 0.07)
+	for i in COLORS.size():
+		var a0 := _time * 2.0 + i * TAU / COLORS.size()
+		draw_arc(c, ring, a0, a0 + TAU / COLORS.size(), 8, COLORS[i], w, true)
+	var star := PackedVector2Array()
+	for i in 10:
+		var rr := size.x * (0.17 if i % 2 == 0 else 0.07)
+		star.append(c + Vector2.from_angle(-PI / 2.0 + i * PI / 5.0) * rr)
+	draw_colored_polygon(star, Color.WHITE)
+
+
+## Joia: diamante facetado com brilho pulsando (precisa chegar ao fundo).
+func _draw_gem() -> void:
+	var c := size / 2.0
+	var k := size.x
+	var pulse := 0.5 + 0.5 * sin(_time * 4.0)
+	draw_circle(c, k * 0.42, Color(GEM_COLOR, 0.10 + 0.12 * pulse))
+	var top := c.y - k * 0.22
+	var mid := c.y - k * 0.06
+	var bottom := c.y + k * 0.32
+	var outline := PackedVector2Array([
+		Vector2(c.x - k * 0.18, top), Vector2(c.x + k * 0.18, top), Vector2(c.x + k * 0.33, mid),
+		Vector2(c.x, bottom), Vector2(c.x - k * 0.33, mid)])
+	draw_colored_polygon(outline, Color(GEM_COLOR, 0.35))
+	var w := maxf(2.0, k * 0.045)
+	var closed := outline.duplicate()
+	closed.append(outline[0])
+	closed.append(outline[1])
+	draw_polyline(closed, GEM_COLOR.lightened(0.3), w, true)
+	var facet := Color(1, 1, 1, 0.7)
+	draw_line(Vector2(c.x - k * 0.33, mid), Vector2(c.x + k * 0.33, mid), facet, w * 0.6, true)
+	draw_line(Vector2(c.x - k * 0.08, top), Vector2(c.x - k * 0.14, mid), facet, w * 0.5, true)
+	draw_line(Vector2(c.x + k * 0.08, top), Vector2(c.x + k * 0.14, mid), facet, w * 0.5, true)
+	draw_line(Vector2(c.x - k * 0.14, mid), Vector2(c.x, bottom), facet, w * 0.5, true)
+	draw_line(Vector2(c.x + k * 0.14, mid), Vector2(c.x, bottom), facet, w * 0.5, true)
+	draw_circle(Vector2(c.x + k * 0.1, top + k * 0.06), k * 0.03 * (0.5 + pulse), Color.WHITE)
+
+
+## Gelo por cima do bloco: translúcido; com 1 golpe restante aparece rachado.
+func _draw_ice() -> void:
+	var r := _box_rect().grow(-size.x * 0.01)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(ICE_COLOR, 0.42 if ice >= 2 else 0.28)
+	sb.border_color = Color(ICE_COLOR, 0.95)
+	sb.set_border_width_all(maxi(2, int(size.x * (0.07 if ice >= 2 else 0.045))))
+	sb.set_corner_radius_all(int(size.x * 0.16))
+	sb.anti_aliasing = true
+	draw_style_box(sb, r)
+	var k := size.x
+	var w := maxf(1.5, k * 0.03)
+	draw_line(Vector2(0.24, 0.3) * k, Vector2(0.36, 0.2) * k, Color(1, 1, 1, 0.9), w, true)  # reflexo
+	draw_line(Vector2(0.24, 0.42) * k, Vector2(0.48, 0.2) * k, Color(1, 1, 1, 0.7), w, true)
+	if ice == 1:
+		var crack := Color(1, 1, 1, 0.85)
+		draw_polyline(PackedVector2Array([Vector2(0.5, 0.14) * k, Vector2(0.56, 0.4) * k, Vector2(0.44, 0.56) * k, Vector2(0.58, 0.86) * k]), crack, w, true)
+		draw_polyline(PackedVector2Array([Vector2(0.56, 0.4) * k, Vector2(0.84, 0.48) * k]), crack, w, true)
+		draw_polyline(PackedVector2Array([Vector2(0.44, 0.56) * k, Vector2(0.16, 0.66) * k]), crack, w, true)

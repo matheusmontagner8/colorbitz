@@ -45,8 +45,13 @@ var _board_bg: Panel
 var _fx_layer: Control
 var _pause_button: Button
 var _level_label: Label
+var _goal_row: HBoxContainer
 var _goal_label: Label
-var _goal_chip: Control
+## Meta com cores/joias: [{chip: BlockView, label: Label ou null, color: int}]
+var _goal_parts: Array = []
+var _holes_layer: Control
+## Dica da fase (levels.json "tip"), some no primeiro toque como o tutorial.
+var _level_tip := ""
 var _score_label: Label
 var _moves_label: Label
 var _tutorial_label: Label
@@ -99,15 +104,11 @@ func _build_ui() -> void:
 	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	Fx.glow_label(_level_label, NEON_CYAN, 14)
 
-	var goal_row := HBoxContainer.new()
-	goal_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	goal_row.add_theme_constant_override("separation", 12)
-	hud.add_child(goal_row)
-	_goal_label = _make_label(goal_row, 38, Color.WHITE)
-	_goal_chip = BlockView.new()
-	_goal_chip.custom_minimum_size = Vector2(52, 52)
-	_goal_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	goal_row.add_child(_goal_chip)
+	_goal_row = HBoxContainer.new()
+	_goal_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_goal_row.add_theme_constant_override("separation", 10)
+	_goal_row.custom_minimum_size.y = 52
+	hud.add_child(_goal_row)
 
 	_goal_bar = ProgressBar.new()
 	_goal_bar.show_percentage = false
@@ -159,6 +160,12 @@ func _build_ui() -> void:
 	_board_bg.add_theme_stylebox_override("panel", sb)
 	_board_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stage.add_child(_board_bg)
+
+	# Buracos dos tabuleiros com formato: "recortes" escuros sob os blocos.
+	_holes_layer = Control.new()
+	_holes_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_holes_layer.draw.connect(_draw_holes)
+	_stage.add_child(_holes_layer)
 
 	_board_root = Control.new()
 	_board_root.gui_input.connect(_on_board_input)
@@ -312,12 +319,16 @@ func _start_level() -> void:
 	_shown_score = 0.0
 	_goal_bar.value = 0.0
 	_shuffle_button.visible = false
+	_build_goal_row()
 	_rebuild_blocks()
 	_pause_overlay.visible = false
 	_result_overlay.visible = false
 	_pause_button.disabled = false
+	_level_tip = String(GameState.current_level().get("tip", ""))
 	if GameState.current_index == 0:
 		_show_tip(TUTORIAL_TEXT)
+	elif _level_tip != "":
+		_show_tip(_level_tip)
 	else:
 		_tutorial_label.visible = false
 	_layout()
@@ -340,6 +351,7 @@ func _rebuild_blocks() -> void:
 				continue
 			var block := BlockView.new()
 			block.color_index = c
+			block.ice = board.get_ice(x, y)
 			_board_root.add_child(block)
 			_blocks[Vector2i(x, y)] = block
 	_layout()
@@ -386,6 +398,9 @@ func _layout() -> void:
 	var board_size := Vector2(board.width, board.height) * _cell
 	_board_root.size = board_size
 	_board_root.position = Vector2((size.x - board_size.x) / 2.0, HUD_HEIGHT + (avail.y - board_size.y) / 2.0 + MARGIN)
+	_holes_layer.position = _board_root.position
+	_holes_layer.size = board_size
+	_holes_layer.queue_redraw()
 	_board_bg.position = _board_root.position - Vector2(10, 10)
 	_board_bg.size = board_size + Vector2(20, 20)
 	if not _busy:
@@ -427,7 +442,7 @@ func _on_board_input(event: InputEvent) -> void:
 	if result.is_empty():
 		_nudge(cell)
 		return
-	if _tutorial_label.text == TUTORIAL_TEXT:
+	if _tutorial_label.text == TUTORIAL_TEXT or (_level_tip != "" and _tutorial_label.text == _level_tip):
 		_hide_tip()
 	_animate(result)
 
@@ -437,6 +452,8 @@ func _on_board_input(event: InputEvent) -> void:
 func _after_move() -> void:
 	_busy = false
 	_shuffle_button.visible = false
+	for p in _blocks:
+		_blocks[p].ice = _session.board.get_ice(p.x, p.y)
 	_layout()
 	if _session.status != GameSession.Status.PLAYING:
 		_finish()
@@ -529,6 +546,7 @@ func _set_power(power: String) -> void:
 func _use_hammer(cell: Vector2i) -> void:
 	var result: Dictionary = _session.use_hammer(cell.x, cell.y)
 	if result.is_empty():
+		_nudge(cell)  # joia (ou célula vazia): o Martelo não quebra
 		return
 	GameState.use_power("hammer")
 	_set_power("")
@@ -537,6 +555,9 @@ func _use_hammer(cell: Vector2i) -> void:
 
 func _pick_swap(cell: Vector2i) -> void:
 	if not _blocks.has(cell):
+		return
+	if _session.board.get_cell(cell.x, cell.y) == _session.board.GEM:
+		_nudge(cell)  # joias não trocam de lugar
 		return
 	if _swap_first == null:
 		_swap_first = cell
@@ -627,7 +648,12 @@ func _animate(result: Dictionary) -> void:
 	for block in removed:
 		block.queue_free()
 
-	if not result.moves.is_empty():
+	# Joias coletadas: caem até o fundo junto com os outros e depois somem.
+	var gems: Array = []  # [[bloco, posição de coleta]]
+	for g in result.get("gems", []):
+		gems.append([_blocks[g.from], g.to])
+		_blocks.erase(g.from)
+	if not result.moves.is_empty() or not gems.is_empty():
 		var moved := {}
 		for m in result.moves:
 			moved[m.to] = _blocks[m.from]
@@ -640,16 +666,54 @@ func _animate(result: Dictionary) -> void:
 		for to in moved:
 			fall.tween_property(moved[to], "position", _cell_pos(to), FALL_TIME) \
 				.set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		for g in gems:
+			fall.tween_property(g[0], "position", _cell_pos(g[1]), FALL_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		await fall.finished
 		if gen != _generation:
 			return
+		for g in gems:
+			_collect_gem(g[0], g[1])
 
 	_after_move()
 
 
 # --- Efeitos ------------------------------------------------------------------
 
+## Joia chegou ao fundo: brilha, sobe um pouco e some.
+func _collect_gem(block: Control, p: Vector2i) -> void:
+	var col := BlockView.GEM_COLOR
+	_burst(_cell_center(p), col, true)
+	_float_text("Joia!", _cell_center(p) + Vector2(0, -20), col, 40)
+	Audio.play_sfx("star", 1.2)
+	GameState.vibrate(40)
+	var t := create_tween().set_parallel(true)
+	t.tween_property(block, "scale", Vector2.ONE * 1.5, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(block, "position:y", block.position.y - _cell * 0.6, 0.3)
+	t.tween_property(block, "modulate:a", 0.0, 0.3).set_delay(0.1)
+	t.chain().tween_callback(block.queue_free)
+
+
+func _draw_holes() -> void:
+	if _session == null:
+		return
+	var board = _session.board
+	for y in board.height:
+		for x in board.width:
+			if board.get_cell(x, y) != board.HOLE:
+				continue
+			var r := Rect2(Vector2(x, y) * _cell, Vector2(_cell, _cell))
+			_holes_layer.draw_rect(r.grow(1.0), Color(0.008, 0.012, 0.035))
+			_holes_layer.draw_rect(r.grow(-_cell * 0.12), Color(NEON_CYAN, 0.08), false, 2.0)
+
 func _play_effects(result: Dictionary) -> void:
+	# Gelo rachado: o bloco ainda está na posição antiga (antes da gravidade).
+	for p in result.get("iced", []):
+		var frozen = _blocks.get(p)
+		if frozen:
+			frozen.ice = maxi(0, frozen.ice - 1)
+		_burst(_cell_center(p), BlockView.ICE_COLOR, false)
+	if not result.get("iced", []).is_empty():
+		Audio.play_sfx("thud", 1.5)
 	var n: int = int(result.size)
 	var is_explosion: bool = int(result.color) == BlockView.BOMB
 	var col := BlockView.color_of(int(result.color))
@@ -853,13 +917,7 @@ func _show_hint() -> void:
 
 func _update_hud() -> void:
 	_level_label.text = "Fase %d" % (GameState.current_index + 1)
-	var is_color: bool = _session.goal_type() == "color"
-	_goal_chip.visible = is_color
-	if is_color:
-		_goal_chip.color_index = int(_session.goal.get("color", 0))
-		_goal_label.text = "Meta: %d / %d" % [mini(_session.goal_progress(), _session.goal_target()), _session.goal_target()]
-	else:
-		_goal_label.text = "Meta: %d pontos" % _session.goal_target()
+	_update_goal_text()
 	_update_goal_bar()
 	_animate_score()
 	_moves_label.text = "Jogadas: %d" % _session.moves_left
@@ -873,6 +931,54 @@ func _update_hud() -> void:
 	Fx.glow_label(_moves_label, DANGER_COLOR if danger else MOVES_COLOR, 12 if danger else 6)
 
 
+## Monta a linha da meta conforme o tipo: texto e, se for o caso, ícones
+## das cores ou da joia.
+func _build_goal_row() -> void:
+	for child in _goal_row.get_children():
+		_goal_row.remove_child(child)
+		child.queue_free()
+	_goal_parts.clear()
+	_goal_label = _make_label(_goal_row, 38, Color.WHITE)
+	match _session.goal_type():
+		"color":
+			_add_goal_part(int(_session.goal.get("color", 0)), false)
+		"drop":
+			_add_goal_part(BlockView.GEM, false)
+		"colors":
+			var targets: Dictionary = _session.color_targets()
+			for c in targets:
+				_add_goal_part(c, true)
+
+
+func _add_goal_part(index: int, with_label: bool) -> void:
+	var chip := BlockView.new()
+	chip.color_index = index
+	chip.custom_minimum_size = Vector2(52, 52)
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_goal_row.add_child(chip)
+	var label: Label = _make_label(_goal_row, 38, Color.WHITE) if with_label else null
+	_goal_parts.append({"chip": chip, "label": label, "color": index})
+
+
+func _update_goal_text() -> void:
+	var progress := mini(_session.goal_progress(), _session.goal_target())
+	match _session.goal_type():
+		"color", "drop":
+			_goal_label.text = "Meta: %d / %d" % [progress, _session.goal_target()]
+		"colors":
+			_goal_label.text = "Meta:"
+			var targets: Dictionary = _session.color_targets()
+			for part in _goal_parts:
+				var need: int = targets[part.color]
+				var done := mini(_session.removed_of(part.color), need)
+				part.label.text = "%d/%d" % [done, need]
+				part.label.add_theme_color_override("font_color", GOAL_DONE_COLOR if done >= need else Color.WHITE)
+		"clear":
+			_goal_label.text = "Restam %d blocos (meta: %d)" % [_session.board.count_blocks(), int(_session.goal.get("max_left", 0))]
+		_:
+			_goal_label.text = "Meta: %d pontos" % _session.goal_target()
+
+
 ## Barra de meta: enche suavemente; fica verde quando a meta é cumprida.
 func _update_goal_bar() -> void:
 	var target: float = maxf(_session.goal_target(), 1)
@@ -882,6 +988,8 @@ func _update_goal_bar() -> void:
 		col = GOAL_DONE_COLOR
 	elif _session.goal_type() == "color":
 		col = BlockView.color_of(int(_session.goal.get("color", 0)))
+	elif _session.goal_type() == "drop":
+		col = BlockView.GEM_COLOR
 	_goal_fill.bg_color = col
 	_goal_fill.shadow_color = Color(col, 0.45)
 	if _goal_tween:

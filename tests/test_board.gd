@@ -319,3 +319,151 @@ func test_shuffle_impossible() -> void:
 	var b := _board(["01", "23"])
 	assert_false(b.shuffle(RandomNumberGenerator.new()))
 	assert_eq(b.to_rows(), ["01", "23"], "nada muda")
+
+
+# --- Especiais: pedra, coringa, gelo, joia e buracos ---------------------------
+
+func test_stone_is_not_tappable_and_falls() -> void:
+	var b := _board(["S", "1", "1"])
+	assert_true(b.tap(0, 0).is_empty(), "pedra não estoura")
+	assert_false(_board(["S1", "S2"]).has_moves(), "pedras não formam grupo")
+	var r := b.tap(0, 1)
+	assert_eq(r.removed_colors, {1: 2})
+	assert_eq(b.to_rows(), [".", ".", "S"], "pedra cai com a gravidade")
+
+
+func test_bomb_and_hammer_break_stones() -> void:
+	var b := _board(["SBS", "111"])
+	var r := b.tap(1, 0)
+	assert_eq(r.size, 5, "2 pedras + 3 blocos")
+	assert_eq(r.removed_colors, {1: 3}, "pedra não conta como cor")
+	var h := _board(["S1", "21"])
+	var hr := h.smash(0, 0)
+	assert_eq(hr.removed_colors, {})
+	assert_eq(h.count_blocks(), 3)
+
+
+func test_wild_joins_any_color() -> void:
+	var b := _board(["1W1", "234"])
+	var r := b.tap(0, 0)
+	assert_eq(r.size, 3, "o coringa liga os dois 1")
+	assert_eq(r.removed_colors, {1: 3}, "coringa conta como a cor do grupo")
+	assert_true(_board(["1W", "23"]).has_moves(), "cor + coringa é jogada")
+	assert_true(_board(["WW", "1."]).has_moves())
+
+
+func test_tapping_wild_picks_biggest_neighbor_color() -> void:
+	var b := _board(["1W22", "3456"])
+	var r := b.tap(1, 0)
+	assert_eq(r.color, 2)
+	assert_eq(r.size, 3)
+	assert_eq(b.to_rows(), ["1...", "3456"])
+	assert_true(_board(["WW", "12"]).find_group(0, 0).size() == 3, "W W + o 1 de baixo")
+	assert_eq(_board(["W", "3"]).tap(0, 0).size, 2)
+	assert_true(_board(["WW"]).tap(0, 0).is_empty(), "só coringas não formam grupo")
+
+
+func test_ice_blocks_until_cracked() -> void:
+	var b := _board(["11", "22"])
+	b.set_ice(0, 1, 1)
+	assert_true(b.tap(0, 1).is_empty(), "bloco congelado não pode ser tocado")
+	assert_eq(b.find_group(1, 1).size(), 1, "nem entra em grupo")
+	var r := b.tap(0, 0)
+	assert_eq(r.iced, [Vector2i(0, 1)], "o estouro ao lado racha o gelo")
+	assert_false(b.is_frozen(0, 1))
+	assert_eq(b.find_group(1, 1).size(), 2, "solto, volta a formar grupo")
+
+
+func test_strong_ice_needs_two_hits_and_falls_with_block() -> void:
+	var b := _board(["2", "1", "1"])
+	b.set_ice(0, 0, 2)
+	b.tap(0, 1)
+	assert_eq(b.to_rows(), [".", ".", "2"])
+	assert_eq(b.get_ice(0, 2), 1, "o gelo cai junto com o bloco")
+	assert_eq(b.get_ice(0, 0), 0)
+
+
+func test_bomb_destroys_frozen_blocks() -> void:
+	var b := _board(["B2", "33"])
+	b.set_ice(1, 0, 2)
+	var r := b.tap(0, 0)
+	assert_eq(r.removed_colors, {2: 1, 3: 2})
+	assert_eq(b.count_blocks(), 0)
+	assert_eq(b.get_ice(1, 0), 0)
+
+
+func test_gem_is_collected_at_the_bottom() -> void:
+	var b := _board(["G2", "12", "13"])
+	assert_true(b.tap(0, 0).is_empty(), "joia não estoura")
+	var r := b.tap(0, 1)
+	assert_eq(r.gems, [{"from": Vector2i(0, 0), "to": Vector2i(0, 2)}])
+	assert_eq(r.points, Board.points_for(2) + Board.GEM_POINTS)
+	assert_eq(b.to_rows(), ["2.", "2.", "3."], "joia sai e a coluna vazia fecha")
+	assert_eq(r.moves, [{"from": Vector2i(1, 2), "to": Vector2i(0, 2)}, {"from": Vector2i(1, 1), "to": Vector2i(0, 1)}, {"from": Vector2i(1, 0), "to": Vector2i(0, 0)}])
+
+
+func test_bomb_and_hammer_spare_gems() -> void:
+	var b := _board(["GB", "11"])
+	var r := b.tap(1, 0)
+	assert_eq(r.gems.size(), 1, "explosão abre caminho e a joia chega ao fundo")
+	assert_eq(b.count_blocks(), 0)
+	assert_true(_board(["G1", "21"]).smash(0, 0).is_empty(), "martelo não quebra joia")
+	assert_false(_board(["G1", "21"]).swap(Vector2i(0, 0), Vector2i(1, 0)), "troca não move joia")
+
+
+func test_holes_are_skipped_by_gravity() -> void:
+	var b := _board(["2", "x", "1", "1"])
+	var r := b.tap(0, 2)
+	assert_eq(b.to_rows(), [".", "x", ".", "2"], "o bloco atravessa o buraco")
+	assert_eq(r.moves, [{"from": Vector2i(0, 0), "to": Vector2i(0, 3)}])
+	assert_true(b.tap(0, 1).is_empty())
+
+
+func test_apply_mask_and_fill() -> void:
+	var b := Board.new(3, 3)
+	b.apply_mask(["#.#", "###", "#.#"])
+	assert_false(b.collapse_columns, "buracos desligam o fechamento de colunas")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	b.fill_random(3, rng)
+	assert_eq(b.get_cell(1, 0), Board.HOLE)
+	assert_eq(b.count_blocks(), 7, "buraco não conta como bloco")
+
+
+func test_place_specials() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed in 20:
+		rng.seed = seed
+		var b := Board.new(7, 9)
+		b.fill_random(5, rng)
+		b.place_specials({"gems": 2, "stones": 3, "wilds": 2, "ice": 4, "ice_hits": 2}, rng)
+		assert_eq(b.count_color(Board.GEM), 2)
+		assert_eq(b.count_color(Board.STONE), 3)
+		assert_eq(b.count_color(Board.WILD), 2)
+		var frozen := 0
+		for y in 9:
+			for x in 7:
+				if b.get_cell(x, y) == Board.GEM:
+					assert_eq(y, 9 - 1 - Board.GEM_START_DEPTH, "joia começa no meio da coluna")
+				if b.get_cell(x, y) == Board.STONE:
+					assert_true(y >= 2, "pedra longe do topo")
+				if b.is_frozen(x, y):
+					frozen += 1
+					assert_eq(b.get_ice(x, y), 2)
+					assert_true(Board.is_color(b.get_cell(x, y)), "gelo só em bloco colorido")
+		assert_eq(frozen, 4)
+		assert_true(b.has_moves(), "seed %d" % seed)
+
+
+func test_swap_carries_ice_and_shuffle_keeps_specials() -> void:
+	var b := _board(["1S", "23"])
+	b.set_ice(0, 0, 1)
+	assert_true(b.swap(Vector2i(0, 0), Vector2i(1, 1)))
+	assert_eq(b.get_ice(1, 1), 1)
+	assert_eq(b.get_ice(0, 0), 0)
+	var s := _board(["0S12", "3W45", "6789"])
+	s.set_ice(3, 2, 1)
+	assert_true(s.shuffle(RandomNumberGenerator.new()), "coringa no meio sempre gera jogada")
+	assert_eq(s.get_cell(1, 0), Board.STONE)
+	assert_eq(s.get_cell(1, 1), Board.WILD)
+	assert_eq(s.get_cell(3, 2), 9, "congelado fica no lugar")
