@@ -122,6 +122,16 @@ godot --headless --path . -s tools/balance.gd -- 300 daily   # modelos da fase d
 godot --headless --path . -s tools/generate_audio.gd
 ```
 
+### APK de teste para Android
+
+Precisa dos modelos de exportação do Godot 4.7.2, de um JDK 17 (o do Android Studio serve)
+e do Android SDK, configurados em *Editor → Configurações do Editor → Exportar → Android*.
+
+```bash
+godot --headless --path . --export-debug Android build/colorbitz-debug.apk
+adb install -r build/colorbitz-debug.apk   # celular ligado no USB com depuração ativada
+```
+
 ## Estrutura
 
 ```
