@@ -117,12 +117,14 @@ func check_achievements() -> Array:
 	return unlocked
 
 
-## Recompensa diária: devolve os poderes ganhos ({} se já resgatou hoje).
+## Recompensa diária: marca o dia na sequência e devolve os poderes ganhos
+## ({} se já marcou hoje ou se não for o 7º dia).
 func claim_daily_reward() -> Dictionary:
+	if not progress.can_claim_daily(today()):
+		return {}
 	var reward: Dictionary = progress.claim_daily(today())
-	if not reward.is_empty():
-		check_achievements()
-		save()
+	check_achievements()  # "Toda semana" depende da sequência
+	save()
 	return reward
 
 

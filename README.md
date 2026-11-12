@@ -49,8 +49,8 @@ antes de acabarem as jogadas.
   tocar em **Embaralhar** (grátis, só aparece com o tabuleiro travado); sem poderes, o tabuleiro
   é embaralhado automaticamente.
 - **Bônus de vitória**: cada jogada que sobrou estoura um bloco e vale +100 pontos.
-- **Recompensa diária**: abrir o jogo todo dia dá um poder (dias ímpares Martelo, pares Troca);
-  o 7º dia seguido vale 2 de cada. Pular um dia recomeça a sequência.
+- **Recompensa diária**: abrir o jogo todo dia avança uma sequência de 7 dias; o 7º dia seguido
+  dá 2 Martelos e 2 Trocas. Pular um dia recomeça a sequência.
 - **Fase diária**: um tabuleiro por dia, igual para todo mundo (semente pela data no horário de
   Brasília). Cada dia da semana tem um tema (pedras, coringas, gelo, joias, ampulheta, meta dupla,
   limpeza). Pode repetir à vontade; a primeira vitória do dia dá +1 Martelo e +1 Troca e o jogo

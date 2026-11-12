@@ -42,13 +42,14 @@ static func cycle_day(streak: int) -> int:
 	return (maxi(streak, 1) - 1) % STREAK_CYCLE + 1
 
 
+## Prêmio do 7º dia seguido (os outros dias só contam a sequência).
+const STREAK_REWARD := {"hammer": 2, "swap": 2}
+
+
 ## Recompensa por abrir o jogo no dia [param streak] da sequência:
-## dias ímpares dão Martelo, pares dão Troca e o 7º dá 2 de cada.
+## só o 7º dia do ciclo dá prêmio ({} nos outros).
 static func reward_for_streak(streak: int) -> Dictionary:
-	var day := cycle_day(streak)
-	if day == STREAK_CYCLE:
-		return {"hammer": 2, "swap": 2}
-	return {"hammer": 1} if day % 2 == 1 else {"swap": 1}
+	return STREAK_REWARD.duplicate() if cycle_day(streak) == STREAK_CYCLE else {}
 
 
 ## Fase diária do dia: modelo pelo dia da semana e semente fixa pela data.

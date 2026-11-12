@@ -140,7 +140,8 @@ func streak_if_claimed(day: int) -> int:
 	return daily_streak + 1 if day == daily_claim_day + 1 else 1
 
 
-## Resgata a recompensa do dia. Retorna os poderes ganhos ({} se já resgatou).
+## Marca o dia na sequência. Retorna os poderes ganhos ({} se já marcou hoje
+## ou se não for o 7º dia).
 func claim_daily(day: int) -> Dictionary:
 	if not can_claim_daily(day):
 		return {}

@@ -172,15 +172,18 @@ func test_daily_reward_once_per_day_and_streak() -> void:
 	var p := Progress.new()
 	var start := p.power_count("hammer")
 	assert_true(p.can_claim_daily(100))
-	assert_eq(p.claim_daily(100), {"hammer": 1})
-	assert_eq(p.power_count("hammer"), start + 1, "bônus soma no saldo")
-	assert_eq(p.claim_daily(100), {}, "só uma vez por dia")
-	assert_eq(p.claim_daily(101), {"swap": 1})
+	assert_eq(p.claim_daily(100), {}, "dia 1: só conta a sequência")
+	assert_false(p.can_claim_daily(100), "só uma vez por dia")
+	p.claim_daily(101)
 	assert_eq(p.daily_streak, 2)
+	for day in range(102, 106):
+		p.claim_daily(day)
+	assert_eq(p.claim_daily(106), {"hammer": 2, "swap": 2}, "7º dia seguido")
+	assert_eq(p.power_count("hammer"), start + 2, "prêmio soma no saldo")
 	assert_false(p.can_claim_daily(99), "relógio para trás não ganha")
-	p.claim_daily(105)
+	p.claim_daily(110)
 	assert_eq(p.daily_streak, 1, "pulou dias: recomeça")
-	assert_eq(p.stat_value("streak"), 2, "guarda a maior sequência")
+	assert_eq(p.stat_value("streak"), 7, "guarda a maior sequência")
 
 
 func test_daily_win_rewards_only_first_win_of_day() -> void:

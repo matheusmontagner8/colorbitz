@@ -14,10 +14,11 @@ func test_day_changes_at_midnight_in_brasilia() -> void:
 
 
 func test_streak_rewards_cycle_every_7_days() -> void:
-	assert_eq(Daily.reward_for_streak(1), {"hammer": 1})
-	assert_eq(Daily.reward_for_streak(2), {"swap": 1})
+	for streak in range(1, 7):
+		assert_eq(Daily.reward_for_streak(streak), {}, "dia %d só conta a sequência" % streak)
 	assert_eq(Daily.reward_for_streak(7), {"hammer": 2, "swap": 2})
-	assert_eq(Daily.reward_for_streak(8), {"hammer": 1}, "recomeça o ciclo")
+	assert_eq(Daily.reward_for_streak(8), {}, "recomeça o ciclo")
+	assert_eq(Daily.reward_for_streak(14), {"hammer": 2, "swap": 2})
 	assert_eq(Daily.cycle_day(14), 7)
 
 

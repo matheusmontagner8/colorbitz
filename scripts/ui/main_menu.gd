@@ -61,21 +61,32 @@ func _build_reward_overlay() -> void:
 	var sub := _label(box, 34, GOLD)
 	sub.text = "Primeiro dia!" if streak == 1 else "%d dias seguidos!" % streak
 	box.add_child(_build_streak_row(Daily.cycle_day(streak)))
-	var hint := _label(box, 26, Color(1, 1, 1, 0.6))
-	hint.text = "Volte todo dia: o 7º dia vale\n2 Martelos e 2 Trocas."
+	var prize_day := not reward.is_empty()
+	var hint := _label(box, 28, Color(1, 1, 1, 0.75))
+	var left: int = Daily.STREAK_CYCLE - Daily.cycle_day(streak)
+	if prize_day:
+		hint.text = "Prêmio do 7º dia seguido!"
+		hint.add_theme_color_override("font_color", GOLD)
+	elif left == 1:
+		hint.text = "Volte amanhã para ganhar o prêmio:"
+	else:
+		hint.text = "Volte todo dia! Faltam %d dias\npara o prêmio:" % left
 	var powers := HBoxContainer.new()
 	powers.alignment = BoxContainer.ALIGNMENT_CENTER
 	powers.add_theme_constant_override("separation", 24)
 	box.add_child(powers)
-	for p in reward:
+	for p in Daily.STREAK_REWARD:
 		var pb := PowerButton.new()
 		pb.power = p
-		pb.count = int(reward[p])
+		pb.count = int(Daily.STREAK_REWARD[p])
 		pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		powers.add_child(pb)
-		_pulse(pb, 0.0, 1.08)
+		if prize_day:
+			_pulse(pb, 0.0, 1.08)
+		else:
+			pb.modulate.a = 0.45  # prêmio ainda por vir
 	var take := Button.new()
-	take.text = "Pegar!"
+	take.text = "Pegar!" if prize_day else "Continuar"
 	take.theme_type_variation = &"AccentButton"
 	take.custom_minimum_size = Vector2(440, 116)
 	take.pressed.connect(_claim_reward)
@@ -119,6 +130,8 @@ func _build_streak_row(today_slot: int) -> Control:
 
 
 func _claim_reward() -> void:
+	if reward_overlay == null:
+		return
 	var reward: Dictionary = GameState.claim_daily_reward()
 	if not reward.is_empty():
 		Audio.play_sfx("win")

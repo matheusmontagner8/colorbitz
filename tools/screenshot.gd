@@ -243,8 +243,20 @@ func _initialize() -> void:
 	await _save("res://docs/daily_reward.png")
 	menu._claim_reward()
 	await create_timer(0.5).timeout
-	assert(_gs.power_count("hammer") == hammers + 1 and progress.daily_streak == 3, "recompensa resgatada")
+	assert(_gs.power_count("hammer") == hammers and progress.daily_streak == 3, "dia 3: só conta a sequência")
 	assert(not progress.can_claim_daily(DEMO_DAY + 1), "só uma vez por dia")
+	# 7º dia seguido: prêmio de 2 de cada.
+	_gs.day_override = DEMO_DAY + 5
+	progress.daily_streak = 6
+	progress.daily_claim_day = DEMO_DAY + 4
+	change_scene_to_file("res://scenes/main_menu.tscn")
+	await _frames(6)
+	menu = current_scene
+	await _save("res://docs/daily_reward_7.png")
+	menu._claim_reward()
+	await create_timer(0.5).timeout
+	assert(progress.daily_streak == 7 and progress.has_achievement("toda_semana"), "7 dias seguidos")
+	assert(_gs.power_count("hammer") == hammers + 3, "prêmio do 7º dia (+2) e conquista Toda semana (+1)")
 	print("recompensa diária: ok")
 
 	change_scene_to_file("res://scenes/achievements.tscn")
