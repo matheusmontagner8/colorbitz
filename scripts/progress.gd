@@ -12,6 +12,10 @@ var stars: Dictionary = {}
 var sound_on := true
 var music_on := true
 var vibration_on := true
+## Acessibilidade: sem tremor de tela nem ondas de choque, menos partículas.
+var reduce_effects := false
+## Idioma escolhido ("" = o do aparelho; veja I18n.resolve).
+var language := ""
 
 ## Poderes especiais que o jogador usa quando quiser (decisão de design):
 ## começa com POWER_START de cada e ganha +1 de cada a cada POWER_STARS_STEP
@@ -230,6 +234,13 @@ func check_achievements() -> Array:
 	return unlocked
 
 
+## Novo progresso zerado que mantém só as opções (som, música, vibração...).
+func reset_keeping_settings():
+	var fresh = get_script().new()
+	fresh.from_dict({"settings": to_dict().settings})
+	return fresh
+
+
 func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION,
@@ -243,7 +254,7 @@ func to_dict() -> Dictionary:
 		"stats": stats.duplicate(),
 		"achievements": achievements.keys(),
 		"tutorials": tutorials.keys(),
-		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on},
+		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on, "reduce_effects": reduce_effects, "language": language},
 	}
 
 
@@ -294,6 +305,8 @@ func from_dict(data: Dictionary) -> void:
 		sound_on = bool(settings.get("sound", true))
 		music_on = bool(settings.get("music", true))
 		vibration_on = bool(settings.get("vibration", true))
+		reduce_effects = bool(settings.get("reduce_effects", false))
+		language = str(settings.get("language", ""))
 
 
 ## Grava primeiro em um arquivo temporário e depois troca, para não

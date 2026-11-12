@@ -46,7 +46,7 @@ func _draw() -> void:
 	else:
 		_draw_swap(c, col)
 	var font := get_theme_default_font()
-	draw_string(font, Vector2(0, size.y - 16), NAMES.get(power, ""), HORIZONTAL_ALIGNMENT_CENTER, size.x, 26, Color(1, 1, 1, 0.4 if disabled else 0.9))
+	draw_string(font, Vector2(0, size.y - 16), tr(NAMES.get(power, "")), HORIZONTAL_ALIGNMENT_CENTER, size.x, 26, Color(1, 1, 1, 0.4 if disabled else 0.9))
 	# Selo com a quantidade.
 	var bc := Vector2(size.x - 24, 24)
 	var badge := BADGE_COLOR if count > 0 else Color(0.35, 0.38, 0.5)

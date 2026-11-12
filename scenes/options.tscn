@@ -21,7 +21,7 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 32
+theme_override_constants/separation = 22
 
 [node name="Title" type="Label" parent="Center/VBox"]
 layout_mode = 2
@@ -50,6 +50,25 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(480, 104)
 layout_mode = 2
 text = "Vibração: ligada"
+
+[node name="EffectsButton" type="Button" parent="Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 104)
+layout_mode = 2
+text = "Efeitos: completos"
+
+[node name="LanguageButton" type="Button" parent="Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 104)
+layout_mode = 2
+text = "Idioma: Português"
+
+[node name="ResetButton" type="Button" parent="Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 104)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+text = "Apagar progresso"
 
 [node name="Spacer2" type="Control" parent="Center/VBox"]
 custom_minimum_size = Vector2(0, 32)

@@ -128,6 +128,7 @@ func _build_ui() -> void:
 	add_child(_power_bar)
 
 	_fx = BoardFx.new()
+	_fx.reduced = GameState.progress.reduce_effects
 	_stage.add_child(_fx)
 
 	_tip = TipBalloon.new()
@@ -635,7 +636,7 @@ func _play_effects(result: Dictionary) -> void:
 			_fx.shockwave(_cell_center(b), _cell * 2.2, BlockView.BOMB_COLOR)
 		_shake(18.0)
 		GameState.vibrate(160)
-		_fx.combo_text("BUM!" if result.exploded.size() == 1 else "BUM x%d!" % result.exploded.size(), col, _board_center())
+		_fx.combo_text("BUM!" if result.exploded.size() == 1 else tr("BUM x%d!") % result.exploded.size(), col, _board_center())
 		GameState.bomb_tip_seen = true
 		if _tip.is_showing(BOMB_TIP_TEXT):
 			_tip.hide_tip()
@@ -683,6 +684,8 @@ func _make_bomb(p: Vector2i) -> void:
 
 
 func _shake(strength: float) -> void:
+	if GameState.progress.reduce_effects:
+		return
 	create_tween().tween_method(_apply_shake, strength, 0.0, 0.4)
 
 
@@ -709,7 +712,7 @@ func _show_hint() -> void:
 # --- HUD e fim de fase -------------------------------------------------------------
 
 func _update_hud() -> void:
-	_hud.refresh(_session, "Fase diária" if GameState.daily_mode else "Fase %d" % (GameState.current_index + 1))
+	_hud.refresh(_session, tr("Fase diária") if GameState.daily_mode else tr("Fase %d") % (GameState.current_index + 1))
 	_power_bar.refresh(_session.status == GameSession.Status.PLAYING)
 
 
@@ -758,7 +761,7 @@ func _finish() -> void:
 	if won:
 		var gained := GameState.complete_current_level(stars, _session.score)  # salva antes da animação do bônus
 		if gained > 0:
-			power_text = "+%d Martelo e +%d Troca!" % [gained, gained]
+			power_text = tr("+%d Martelo e +%d Troca!") % [gained, gained]
 		_power_bar.disable_all()
 		_busy = true
 		await _play_end_bonus()
@@ -769,9 +772,9 @@ func _finish() -> void:
 		Audio.play_sfx("win")
 	else:
 		Audio.play_sfx("lose")
-	var score_text := "Pontos: %d" % _session.score
+	var score_text := tr("Pontos: %d") % _session.score
 	if _session.end_bonus > 0:
-		score_text += "  (bônus +%d)" % _session.end_bonus
+		score_text += tr("  (bônus +%d)") % _session.end_bonus
 	var next := GameState.current_index + 1
 	var has_next: bool = won and GameState.has_next_level()
 	var info: Array = _daily_info() if GameState.daily_mode else _gate_info(next, has_next)
@@ -786,8 +789,8 @@ func _daily_info() -> Array:
 	var progress = GameState.progress
 	var day: int = GameState.today()
 	if progress.daily_won_today(day):
-		return ["Recorde de hoje: %d pontos.\nAmanhã tem uma fase nova!" % progress.daily_best_today(day), Color("#FFE53D")]
-	return ["Vença a fase diária para ganhar\n+1 Martelo e +1 Troca.", Color("#FFE53D")]
+		return [tr("Recorde de hoje: %d pontos.\nAmanhã tem uma fase nova!") % progress.daily_best_today(day), Color("#FFE53D")]
+	return [tr("Vença a fase diária para ganhar\n+1 Martelo e +1 Troca."), Color("#FFE53D")]
 
 
 ## Se a próxima fase é um portão de estrelas, avisa se foi liberada ou
@@ -798,5 +801,5 @@ func _gate_info(next: int, has_next: bool) -> Array:
 		return ["", Color.WHITE]
 	var missing: int = GameState.missing_stars(next)
 	if missing == 0:
-		return ["Fase %d liberada!" % (next + 1), Color("#2BFF88")]
-	return ["A fase %d exige %d estrelas. Faltam %d: jogue de novo as fases anteriores para conseguir mais estrelas." % [next + 1, required, missing], Color("#FFE53D")]
+		return [tr("Fase %d liberada!") % (next + 1), Color("#2BFF88")]
+	return [tr("A fase %d exige %d estrelas. Faltam %d: jogue de novo as fases anteriores para conseguir mais estrelas.") % [next + 1, required, missing], Color("#FFE53D")]

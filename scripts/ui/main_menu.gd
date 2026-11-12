@@ -36,7 +36,7 @@ func _update_daily_button() -> void:
 	if GameState.progress.daily_won_today(day):
 		%DailyButton.text = "Fase diária (vencida)"
 	else:
-		%DailyButton.text = "Fase diária: %s" % Daily.level_for(day).name
+		%DailyButton.text = tr("Fase diária: %s") % tr(Daily.level_for(day).name)
 
 
 # --- Recompensa diária ----------------------------------------------------------
@@ -59,7 +59,7 @@ func _build_reward_overlay() -> void:
 	title.text = "Recompensa diária"
 	Fx.glow_label(title, NEON_CYAN, 18)
 	var sub := _label(box, 34, GOLD)
-	sub.text = "Primeiro dia!" if streak == 1 else "%d dias seguidos!" % streak
+	sub.text = "Primeiro dia!" if streak == 1 else tr("%d dias seguidos!") % streak
 	box.add_child(_build_streak_row(Daily.cycle_day(streak)))
 	var prize_day := not reward.is_empty()
 	var hint := _label(box, 28, Color(1, 1, 1, 0.75))
@@ -70,7 +70,7 @@ func _build_reward_overlay() -> void:
 	elif left == 1:
 		hint.text = "Volte amanhã para ganhar o prêmio:"
 	else:
-		hint.text = "Volte todo dia! Faltam %d dias\npara o prêmio:" % left
+		hint.text = tr("Volte todo dia! Faltam %d dias\npara o prêmio:") % left
 	var powers := HBoxContainer.new()
 	powers.alignment = BoxContainer.ALIGNMENT_CENTER
 	powers.add_theme_constant_override("separation", 24)

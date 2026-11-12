@@ -143,7 +143,7 @@ func _go(s: Step) -> void:
 func _finish() -> void:
 	step = Step.DONE
 	var gs = _view.get_node("/root/GameState")
-	_label.text = "Pronto! Você tem %d Martelos e %d Trocas.\nGanhe mais com estrelas e conquistas." % [
+	_label.text = tr("Pronto! Você tem %d Martelos e %d Trocas.\nGanhe mais com estrelas e conquistas.") % [
 		gs.power_count("hammer"), gs.power_count("swap")]
 	_label.visible = true
 	_label.reset_size()

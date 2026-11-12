@@ -6,7 +6,7 @@ extends SceneTree
 const TESTS_DIR := "res://tests"
 
 
-func _init() -> void:
+func _initialize() -> void:
 	var total := 0
 	var failed := 0
 	var files := Array(DirAccess.get_files_at(TESTS_DIR))

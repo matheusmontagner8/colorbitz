@@ -19,7 +19,7 @@ func _ready() -> void:
 		var unlocked: bool = progress.has_achievement(a.id)
 		done += 1 if unlocked else 0
 		%List.add_child(_row(a, unlocked, mini(progress.stat_value(a.stat), int(a.goal))))
-	%StarsLabel.text = "%d de %d conquistas" % [done, Achievements.LIST.size()]
+	%StarsLabel.text = tr("%d de %d conquistas") % [done, Achievements.LIST.size()]
 
 
 func _row(a: Dictionary, unlocked: bool, value: int) -> Control:
@@ -50,7 +50,7 @@ func _row(a: Dictionary, unlocked: bool, value: int) -> Control:
 	var goal := int(a.goal)
 	if unlocked:
 		var ok := _label(texts, 24, DONE_COLOR)
-		ok.text = "Concluída! (%s)" % Daily.reward_text(a.reward)
+		ok.text = tr("Concluída! (%s)") % Daily.reward_text(a.reward)
 	else:
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override("separation", 12)
@@ -74,7 +74,7 @@ func _row(a: Dictionary, unlocked: bool, value: int) -> Control:
 		var count := _label(line, 24, Color(1, 1, 1, 0.75))
 		count.text = "%d/%d" % [value, goal]
 		var prize := _label(texts, 22, Color(DONE_COLOR, 0.7))
-		prize.text = "Prêmio: %s" % Daily.reward_text(a.reward)
+		prize.text = tr("Prêmio: %s") % Daily.reward_text(a.reward)
 	return panel
 
 

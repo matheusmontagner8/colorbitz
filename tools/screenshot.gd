@@ -27,6 +27,8 @@ func _initialize() -> void:
 	demo.stats = {"bombs_created": 1, "best_group": 11, "blocks": 420, "ice": 12, "powers": 4, "wins_no_power": 6, "wins": 9}
 	demo.achievements = {"primeira_bomba": true}
 	demo.tutorials = {"powers": true}  # o tutorial dos poderes tem cenário próprio
+	demo.language = "pt"  # capturas sempre em português (há um cenário em inglês no fim)
+	TranslationServer.set_locale("pt")
 	_gs.progress = demo
 
 	await _shot("res://scenes/main_menu.tscn", "res://docs/menu.png")
@@ -310,6 +312,40 @@ func _initialize() -> void:
 	assert(current_scene.get_node("%List").get_child_count() == current_scene.Achievements.LIST.size(), "lista de conquistas")
 	await _save("res://docs/achievements.png")
 	print("conquistas: ok")
+
+	# Opções: trocar o idioma pela tela muda os textos na hora.
+	change_scene_to_file("res://scenes/options.tscn")
+	await _frames(6)
+	var options = current_scene
+	options.get_node("%LanguageButton").pressed.emit()
+	await _frames(3)
+	assert(progress.language == "en" and TranslationServer.get_locale() == "en", "idioma trocado")
+	assert(options.get_node("%LanguageButton").text == "Language: English", "botão em inglês")
+	await _save("res://docs/en_options.png")
+	change_scene_to_file("res://scenes/main_menu.tscn")
+	await _frames(6)
+	await _save("res://docs/en_menu.png")
+	_gs.daily_mode = false
+	_gs.current_index = 31  # fase 32: meta dupla
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	assert(current_scene._hud.level_label.text == "Level 32", "HUD em inglês")
+	await _save("res://docs/en_game.png")
+	print("inglês: ok")
+
+	# Apagar progresso: pede confirmação, zera tudo e mantém as opções.
+	change_scene_to_file("res://scenes/options.tscn")
+	await _frames(6)
+	options = current_scene
+	options.get_node("%ResetButton").pressed.emit()
+	await _frames(3)
+	assert(options.confirm != null and options.confirm.visible, "confirmação aparece")
+	await _save("res://docs/en_reset.png")
+	options._do_reset()
+	await _frames(2)
+	assert(_gs.progress.total_stars() == 0 and _gs.progress.achievements.is_empty(), "progresso zerado")
+	assert(_gs.progress.language == "en", "opções mantidas")
+	print("apagar progresso: ok")
 	print("captura concluída")
 	quit()
 

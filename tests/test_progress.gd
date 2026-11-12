@@ -249,3 +249,23 @@ func test_tutorials_saved() -> void:
 	assert_true(q.tutorials.has("powers"))
 	q.from_dict({})
 	assert_true(q.tutorials.is_empty(), "save antigo: tutorial ainda não visto")
+
+
+func test_reset_keeps_only_settings() -> void:
+	var p := Progress.new()
+	p.record_result(1, 3)
+	p.use_power("hammer")
+	p.add_powers({"swap": 2})
+	p.claim_daily(10)
+	p.achievements["primeira_bomba"] = true
+	p.tutorials["powers"] = true
+	p.music_on = false
+	p.reduce_effects = true
+	var q = p.reset_keeping_settings()
+	assert_eq(q.total_stars(), 0)
+	assert_eq(q.power_count("hammer"), Progress.POWER_START)
+	assert_eq(q.power_count("swap"), Progress.POWER_START)
+	assert_true(q.can_claim_daily(10))
+	assert_true(q.achievements.is_empty() and q.tutorials.is_empty())
+	assert_false(q.music_on, "opções mantidas")
+	assert_true(q.reduce_effects, "opções mantidas")

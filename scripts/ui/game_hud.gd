@@ -101,12 +101,12 @@ func refresh(session, title: String) -> void:
 
 
 func set_moves(moves: int) -> void:
-	_moves_label.text = "Jogadas: %d" % moves
+	_moves_label.text = tr("Jogadas: %d") % moves
 
 
 func set_shown_score(v: float) -> void:
 	shown_score = v
-	_score_label.text = "Pontos: %d" % roundi(v)
+	_score_label.text = tr("Pontos: %d") % roundi(v)
 
 
 func stop_score_animation() -> void:
@@ -147,7 +147,7 @@ func _update_goal_text(session) -> void:
 	var progress := mini(session.goal_progress(), session.goal_target())
 	match session.goal_type():
 		"color", "drop":
-			_goal_label.text = "Meta: %d / %d" % [progress, session.goal_target()]
+			_goal_label.text = tr("Meta: %d / %d") % [progress, session.goal_target()]
 		"colors":
 			_goal_label.text = "Meta:"
 			var targets: Dictionary = session.color_targets()
@@ -157,9 +157,9 @@ func _update_goal_text(session) -> void:
 				part.label.text = "%d/%d" % [done, need]
 				part.label.add_theme_color_override("font_color", GOAL_DONE_COLOR if done >= need else Color.WHITE)
 		"clear":
-			_goal_label.text = "Restam %d blocos (meta: %d)" % [session.board.count_blocks(), int(session.goal.get("max_left", 0))]
+			_goal_label.text = tr("Restam %d blocos (meta: %d)") % [session.board.count_blocks(), int(session.goal.get("max_left", 0))]
 		_:
-			_goal_label.text = "Meta: %d pontos" % session.goal_target()
+			_goal_label.text = tr("Meta: %d pontos") % session.goal_target()
 
 
 ## Barra de meta: enche suavemente; fica verde quando a meta é cumprida.

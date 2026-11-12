@@ -4,6 +4,8 @@
 ## Lógica pura, sem interface.
 extends RefCounted
 
+const I18n = preload("res://scripts/i18n.gd")
+
 const UTC_OFFSET_SECONDS := -3 * 3600
 const SECONDS_PER_DAY := 86400
 ## A sequência de dias seguidos recomeça a cada 7 dias; o 7º vale mais.
@@ -62,11 +64,11 @@ static func level_for(day: int) -> Dictionary:
 	return level
 
 
-## Texto de uma recompensa: "+1 Martelo e +1 Troca".
+## Texto de uma recompensa (já traduzido): "+1 Martelo e +1 Troca".
 static func reward_text(reward: Dictionary) -> String:
 	var parts := []
 	if int(reward.get("hammer", 0)) > 0:
-		parts.append("+%d Martelo" % int(reward.hammer))
+		parts.append(I18n.t("+%d Martelo") % int(reward.hammer))
 	if int(reward.get("swap", 0)) > 0:
-		parts.append("+%d Troca" % int(reward.swap))
-	return " e ".join(parts)
+		parts.append(I18n.t("+%d Troca") % int(reward.swap))
+	return I18n.t(" e ").join(parts)

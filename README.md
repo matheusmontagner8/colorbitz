@@ -19,6 +19,7 @@ antes de acabarem as jogadas.
   <img src="docs/daily_result.png" width="200" alt="Resultado da fase diária">
   <img src="docs/achievements.png" width="200" alt="Conquistas">
   <img src="docs/tutorial_swap_pair.png" width="200" alt="Tutorial da Troca">
+  <img src="docs/en_game.png" width="200" alt="Jogo em inglês">
 </p>
 
 > Projeto em desenvolvimento: este é o MVP do meu primeiro jogo para Android.
@@ -60,6 +61,9 @@ antes de acabarem as jogadas.
   guarda o recorde do dia.
 - **Conquistas** (15): por exemplo "criar 25 bombas", "vencer 10 fases sem usar poderes",
   "vencer 7 fases diárias". Cada uma dá poderes e aparece num aviso na hora em que é liberada.
+- **Opções**: som, música, vibração, **efeitos reduzidos** (sem tremor de tela nem ondas
+  de choque e com menos partículas, para quem é sensível a movimento), **idioma**
+  (português ou inglês; começa no idioma do celular) e **apagar progresso** (com confirmação).
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
   Cada vitória libera a fase seguinte (60 fases). As fases 10, 20, 30, 40, 50 e 60 são
@@ -85,6 +89,9 @@ antes de acabarem as jogadas.
   `CPUParticles2D` com mistura aditiva, sem pós-processamento, para rodar em celulares modestos.
 - **Progresso salvo** em `user://save.json` ([`scripts/progress.gd`](scripts/progress.gd)),
   com gravação atômica (arquivo temporário + rename) e recuperação de save corrompido.
+- **Dois idiomas sem duplicar código**: o texto em português é a chave e
+  [`data/lang/en.json`](data/lang/en.json) traz o inglês ([`scripts/i18n.gd`](scripts/i18n.gd)).
+  Um teste lê o código e falha se algum texto ficar sem tradução ou com `%d` diferente.
 - **Testes automatizados** com um executor próprio e leve, rodando em modo headless
   no GitHub Actions a cada push.
 - Animações com `Tween`, protegidas contra pausa e reinício no meio da animação.
@@ -158,8 +165,14 @@ tools/     teste de fumaça, simulador de dificuldade e gerador de áudio
 - [x] **Semana 3**: visual neon, partículas, combos, vibração, sons, músicas e fases rebalanceadas
 - [x] **Extras**: poderes, blocos especiais, novas metas, tabuleiros com formato,
       recompensa e fase diária, conquistas
-- [ ] Teste em celular Android real
+- [x] Teste em celular Android real
+- [x] **Antes da loja**: componentes da tela de jogo, inglês, efeitos reduzidos, apagar
+      progresso e política de privacidade
 - [ ] **Semana 4**: anúncios e publicação na Google Play (teste fechado)
+
+## Privacidade
+
+O jogo não coleta dados: veja a [política de privacidade](PRIVACY.md).
 
 ## Créditos e licenças
 

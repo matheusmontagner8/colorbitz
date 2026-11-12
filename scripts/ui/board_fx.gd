@@ -4,6 +4,9 @@ extends Control
 
 const Fx = preload("res://scripts/fx.gd")
 
+## "Reduzir efeitos" (opções): menos partículas e sem ondas de choque.
+var reduced := false
+
 
 func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -22,7 +25,7 @@ func burst(pos: Vector2, col: Color, big: bool) -> void:
 	p.position = pos
 	p.one_shot = true
 	p.explosiveness = 0.95
-	p.amount = 14 if big else 9
+	p.amount = (14 if big else 9) / (3 if reduced else 1)
 	p.lifetime = 0.75
 	p.texture = Fx.dot_texture()
 	p.material = Fx.additive_material()
@@ -78,6 +81,8 @@ func combo_text(text: String, col: Color, center: Vector2) -> void:
 
 ## Onda de choque: anel neon que se expande até [param radius].
 func shockwave(pos: Vector2, radius: float, col: Color) -> void:
+	if reduced:
+		return
 	var ring := Control.new()
 	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ring.set_anchors_preset(Control.PRESET_FULL_RECT)

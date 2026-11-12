@@ -6,6 +6,7 @@ const LevelLoader = preload("res://scripts/level_loader.gd")
 const Progress = preload("res://scripts/progress.gd")
 const Daily = preload("res://scripts/daily.gd")
 const Fx = preload("res://scripts/fx.gd")
+const I18n = preload("res://scripts/i18n.gd")
 
 const SAVE_PATH := "user://save.json"
 const SCENE_MENU := "res://scenes/main_menu.tscn"
@@ -37,6 +38,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	levels = LevelLoader.load_levels()
 	progress.load_from(SAVE_PATH)
+	I18n.apply(progress.language)
 	apply_audio_settings()
 	add_child(preload("res://scripts/ui/neon_background.gd").new())
 	_toast_layer = CanvasLayer.new()
@@ -77,6 +79,16 @@ func missing_stars(index: int) -> int:
 	return progress.missing_stars(index, levels)
 
 
+## Apaga todo o progresso (estrelas, poderes, conquistas, diária), mantendo
+## as opções, e salva.
+func reset_progress() -> void:
+	progress = progress.reset_keeping_settings()
+	bomb_tip_seen = false
+	daily_mode = false
+	current_index = 0
+	save()
+
+
 ## Registra uma vitória na fase atual (ou na diária) e salva.
 ## Retorna quantos poderes de cada tipo o jogador ganhou (estrelas novas ou
 ## primeira vitória do dia na fase diária).
@@ -111,7 +123,7 @@ func record_stats(delta: Dictionary, flush := false) -> void:
 func check_achievements() -> Array:
 	var unlocked: Array = progress.check_achievements()
 	for a in unlocked:
-		show_toast("Conquista: %s" % a.title, Daily.reward_text(a.reward))
+		show_toast(tr("Conquista: %s") % tr(a.title), Daily.reward_text(a.reward))
 	if not unlocked.is_empty():
 		save()
 	return unlocked
