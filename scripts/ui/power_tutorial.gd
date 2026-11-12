@@ -207,9 +207,9 @@ static func _group_size(board, p: Vector2i) -> int:
 func _target_rect() -> Rect2:
 	match step:
 		Step.HAMMER_BUTTON:
-			return _local(_view._power_buttons["hammer"].get_global_rect())
+			return _local(_view._power_bar.buttons["hammer"].get_global_rect())
 		Step.SWAP_BUTTON:
-			return _local(_view._power_buttons["swap"].get_global_rect())
+			return _local(_view._power_bar.buttons["swap"].get_global_rect())
 		Step.HAMMER_CELL:
 			return _cell_rect(hammer_cell)
 		Step.SWAP_FIRST:

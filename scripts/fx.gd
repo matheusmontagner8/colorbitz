@@ -37,3 +37,13 @@ static func glow_label(label: Label, color: Color, strength: int = 12) -> void:
 	label.add_theme_constant_override("shadow_outline_size", strength)
 	label.add_theme_constant_override("shadow_offset_x", 0)
 	label.add_theme_constant_override("shadow_offset_y", 0)
+
+
+## Label centralizado com fonte e cor, já adicionado em [param parent].
+static func make_label(parent: Node, font_size: int, color: Color) -> Label:
+	var l := Label.new()
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", color)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	parent.add_child(l)
+	return l

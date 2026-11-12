@@ -143,7 +143,10 @@ data/      fases (levels.json)
 docs/      imagens do README
 scenes/    cenas: menu, seleção de fases, conquistas, opções e jogo
 scripts/   lógica pura (board, game_session, progress, level_loader, daily, achievements),
-           autoloads GameState e Audio, telas (game_view, ui/) e efeitos (fx)
+           autoloads GameState e Audio, tela de jogo (game_view) e efeitos (fx)
+scripts/ui telas (menu, fases, conquistas, opções) e componentes da tela de jogo:
+           game_hud, power_bar, board_fx, tip_balloon, pause_menu, result_panel,
+           power_tutorial
 tests/     testes da lógica e executor
 tools/     teste de fumaça, simulador de dificuldade e gerador de áudio
 ```

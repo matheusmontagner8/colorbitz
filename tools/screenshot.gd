@@ -132,15 +132,15 @@ func _initialize() -> void:
 	game._after_move()  # com poderes: a fase continua e pede para usar um
 	await _frames(3)
 	assert(game._session.status == game.GameSession.Status.PLAYING, "travado com poderes não perde")
-	assert(game._tutorial_label.text == game.STUCK_TIP and game._tutorial_label.visible, "dica de travado")
-	assert(game._shuffle_button.visible, "botão Embaralhar aparece quando trava")
+	assert(game._tip.is_showing(game.STUCK_TIP), "dica de travado")
+	assert(game._power_bar.shuffle_button.visible, "botão Embaralhar aparece quando trava")
 	await create_timer(0.5).timeout
 	await _save("res://docs/stuck.png")
-	game._shuffle_button.pressed.emit()  # embaralha sem gastar poder
+	game._power_bar.shuffle_button.pressed.emit()  # embaralha sem gastar poder
 	await create_timer(1.0).timeout
-	assert(not game._shuffle_button.visible and not game._session.is_stuck(), "botão embaralhou e sumiu")
+	assert(not game._power_bar.shuffle_button.visible and not game._session.is_stuck(), "botão embaralhou e sumiu")
 	assert(_gs.power_count("hammer") == h0 - 1 and _gs.power_count("swap") == s0 - 1, "embaralhar não gasta poder")
-	game._shuffle_button.pressed.emit()  # destravado: o botão não faz nada
+	game._power_bar.shuffle_button.pressed.emit()  # destravado: o botão não faz nada
 	await _frames(2)
 	assert(not game._busy, "embaralhar só funciona com o tabuleiro travado")
 	# Trava de novo para testar o caminho sem poderes.
@@ -165,7 +165,7 @@ func _initialize() -> void:
 	game._start_level()
 	await create_timer(0.6).timeout
 	assert(game._session.board.count_color(game._session.board.HOLE) > 0, "fase 60 tem buracos")
-	assert(game._goal_parts.size() == 2, "meta dupla mostra duas cores")
+	assert(game._hud.goal_parts.size() == 2, "meta dupla mostra duas cores")
 	await _save("res://docs/specials.png")
 	# Joia e gelo num tabuleiro montado: o grupo de 1 embaixo da joia a leva ao fundo.
 	game._session.goal = {"type": "drop", "count": 5}
@@ -174,7 +174,7 @@ func _initialize() -> void:
 		"0123401", "123G012", "2341123", "3401234",
 	])
 	game._session.board.set_ice(2, 8, 2)
-	game._build_goal_row()
+	game._hud.build_goal_row(game._session)
 	game._rebuild_blocks()
 	game._update_hud()
 	await _frames(3)
@@ -197,11 +197,11 @@ func _initialize() -> void:
 	assert(tut != null and tut.step == tut.Step.HAMMER_BUTTON, "tutorial começa no Martelo")
 	var hammers0: int = _gs.power_count("hammer")
 	var swaps0: int = _gs.power_count("swap")
-	game._power_buttons["swap"].pressed.emit()  # fora de ordem: ignorado
+	game._power_bar.buttons["swap"].pressed.emit()  # fora de ordem: ignorado
 	await _frames(2)
 	assert(game._power == "", "só o botão destacado responde")
 	await _save("res://docs/tutorial_hammer.png")
-	game._power_buttons["hammer"].pressed.emit()
+	game._power_bar.buttons["hammer"].pressed.emit()
 	await _frames(2)
 	assert(tut.step == tut.Step.HAMMER_CELL, "passo do bloco")
 	var other := Vector2i(0, 0) if tut.hammer_cell != Vector2i(0, 0) else Vector2i(1, 0)
@@ -213,7 +213,7 @@ func _initialize() -> void:
 	_tap(game, tut.hammer_cell)
 	await create_timer(1.0).timeout
 	assert(tut.step == tut.Step.SWAP_BUTTON and tut.swap_cells.size() == 2, "passo da Troca")
-	game._power_buttons["swap"].pressed.emit()
+	game._power_bar.buttons["swap"].pressed.emit()
 	await _frames(3)
 	await _save("res://docs/tutorial_swap_pair.png")
 	_tap(game, tut.swap_cells[0])
@@ -246,7 +246,7 @@ func _initialize() -> void:
 	var popped: int = mini(game._session.max_moves, blocks_left)
 	assert(game._session.end_bonus == popped * game.GameSession.END_BONUS_POINTS, "bônus = jogadas que sobraram")
 	assert(game._blocks.size() == game._session.board.count_blocks(), "visual e tabuleiro após o bônus")
-	assert(game._result_overlay.visible, "resultado aparece depois do bônus")
+	assert(game._result.visible, "resultado aparece depois do bônus")
 	print("bônus de fim de fase: ok")
 	await _save("res://docs/result.png")
 
@@ -257,7 +257,7 @@ func _initialize() -> void:
 	change_scene_to_file("res://scenes/game.tscn")
 	await _frames(5)
 	game = current_scene
-	assert(game._level_label.text == "Fase diária", "título da fase diária")
+	assert(game._hud.level_label.text == "Fase diária", "título da fase diária")
 	assert(game._session.board.to_rows() == game.LevelLoader.build_session(_gs.current_level()).board.to_rows(), "tabuleiro do dia é fixo")
 	await _save("res://docs/daily.png")
 	var swaps: int = _gs.power_count("swap")
@@ -271,8 +271,8 @@ func _initialize() -> void:
 	await create_timer(1.2).timeout
 	await _save("res://docs/toast.png")
 	await create_timer(3.5).timeout
-	assert(game._result_overlay.visible and not game._next_button.visible, "sem próxima fase na diária")
-	assert(game._back_button.text == "Menu" and game._gate_label.text.begins_with("Recorde de hoje"), "resultado da diária")
+	assert(game._result.visible and not game._result.next_button.visible, "sem próxima fase na diária")
+	assert(game._result.back_button.text == "Menu" and game._result.info_label.text.begins_with("Recorde de hoje"), "resultado da diária")
 	assert(progress.daily_best_today(DEMO_DAY) == game._session.score, "recorde inclui o bônus")
 	await _save("res://docs/daily_result.png")
 	print("fase diária: ok")
