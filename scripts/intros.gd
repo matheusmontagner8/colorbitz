@@ -6,10 +6,11 @@
 extends RefCounted
 
 const Board = preload("res://scripts/board.gd")
+const Endless = preload("res://scripts/endless.gd")
 
 ## id -> {title, text, icon}. "icon": lista de células para desenhar
 ## (cores 0..5 ou Board.BOMB/WILD/STONE/GEM; "ice"/"ice2" = bloco congelado;
-## "goal" = cores da meta da fase; "hole" = buraco; "chest"/"crown"/"medal" =
+## "goal" = cores da meta da fase; "hole" = buraco; "chest"/"crown"/"medal"/"flame" =
 ## ícones do modo infinito, ui/badge_icon.gd). Textos em português
 ## (traduzidos por data/lang/en.json); "%d" no texto da bomba = tamanho do grupo.
 const CARDS := {
@@ -43,10 +44,12 @@ const CARDS := {
 		"text": "Cada estrela enche o baú: com 30\nestrelas ele abre e dá poderes.\nA cada 10 fases vem uma fase chefe.\nVencer chefes dá patentes: Bronze,\nPrata, Ouro e outras ainda maiores."},
 	"boss": {"title": "Fase chefe!", "icon": ["crown"],
 		"text": "Esta fase é mais difícil que as outras.\nA primeira vitória vale +2 Martelos\ne +2 Trocas, e alguns chefes dão\numa patente nova. Use seus poderes!"},
+	"streak": {"title": "Sequência de vitórias", "icon": ["flame"],
+		"text": "Vença fases novas do infinito uma\natrás da outra para fazer uma sequência.\nA cada 5 vitórias seguidas, ganhe\n+1 Martelo e +1 Troca. Perder, ou sair\nno meio da fase, zera a sequência."},
 }
 
 ## Ordem em que aparecem quando uma fase traz várias novidades de uma vez.
-const ORDER := ["daily", "endless", "endless_goals", "boss", "goal_score", "goal_color", "goal_colors", "goal_clear",
+const ORDER := ["daily", "endless", "endless_goals", "streak", "boss", "goal_score", "goal_color", "goal_colors", "goal_clear",
 	"goal_drop", "holes", "stone", "wild", "ice", "ice2"]
 
 
@@ -63,6 +66,9 @@ static func concepts_for(level: Dictionary, board, daily := false) -> Array:
 	if bool(level.get("endless", false)):
 		found["endless"] = true
 		found["endless_goals"] = true
+		# A sequência só aparece depois da primeira fase (já com 1 vitória).
+		if int(level.get("id", 0)) > Endless.FIRST_LEVEL:
+			found["streak"] = true
 	if bool(level.get("boss", false)):
 		found["boss"] = true
 	var goal_type := String(level.get("goal", {}).get("type", "score"))

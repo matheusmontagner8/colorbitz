@@ -64,11 +64,12 @@ func test_boss_and_rank_rewards() -> void:
 		p.record_result(n, 1)
 	for n in range(61, 70):
 		p.record_result(n, 1)
-		assert_eq(p.claim_endless_rewards(n, true, CAMPAIGN), [], "fase comum: nada (%d)" % n)
+		var expected := ["streak"] if n == 65 else []  # 5 vitórias seguidas
+		assert_eq(_kinds(p.claim_endless_rewards(n, true, CAMPAIGN)), expected, "fase comum (%d)" % n)
 	var hammers := p.power_count("hammer")
 	p.record_result(70, 2)
 	var rewards := p.claim_endless_rewards(70, true, CAMPAIGN)
-	assert_eq(_kinds(rewards), ["boss", "rank"], "chefe 70 e patente Bronze")
+	assert_eq(_kinds(rewards), ["boss", "rank", "streak"], "chefe 70, patente Bronze e 10 seguidas")
 	assert_eq(p.power_count("hammer"), hammers + _sum(rewards, "hammer"), "poderes somados")
 	p.record_result(70, 3)
 	assert_eq(p.claim_endless_rewards(70, false, CAMPAIGN), [], "repetir o chefe não dá de novo")
@@ -95,7 +96,7 @@ func test_chest_opens_every_30_endless_stars() -> void:
 	assert_eq(p.chest_stars(CAMPAIGN), 27)
 	p.record_result(70, 3)  # 30 estrelas: abre (e a 70 é chefe)
 	var rewards := p.claim_endless_rewards(70, true, CAMPAIGN)
-	assert_eq(_kinds(rewards), ["boss", "rank", "chest"])
+	assert_eq(_kinds(rewards), ["boss", "rank", "chest", "streak"])
 	assert_eq(rewards[2].reward, Endless.chest_prize(1))
 	assert_eq(p.chests_opened, 1)
 	assert_eq(p.chest_stars(CAMPAIGN), 0, "baú recomeça")
@@ -107,3 +108,31 @@ func test_chest_opens_every_30_endless_stars() -> void:
 	var fresh = q.reset_keeping_settings()
 	assert_eq(fresh.chests_opened, 0, "apagar progresso zera o baú")
 	assert_eq(fresh.rank_claimed, -1)
+
+
+func test_win_streak() -> void:
+	var p := Progress.new()
+	for n in range(61, 65):
+		p.record_result(n, 1)
+		p.claim_endless_rewards(n, true, CAMPAIGN)
+	assert_eq(p.streak, 4)
+	p.streak_pending = true
+	p.claim_endless_rewards(61, false, CAMPAIGN)  # repetir fase vencida
+	assert_eq(p.streak, 4, "repetir fase já vencida não conta")
+	assert_false(p.streak_pending, "vitória encerra a tentativa")
+	var hammers := p.power_count("hammer")
+	p.record_result(65, 1)
+	var rewards := p.claim_endless_rewards(65, true, CAMPAIGN)
+	assert_eq(_kinds(rewards), ["streak"])
+	assert_eq(int(rewards[0].count), 5)
+	assert_eq(p.power_count("hammer"), hammers + int(Endless.STREAK_REWARD.hammer))
+	assert_eq(p.break_streak(), 5, "derrota devolve a sequência perdida")
+	assert_eq(p.streak, 0)
+	assert_eq(p.streak_best, 5, "recorde fica")
+	p.streak = 3
+	p.streak_pending = true
+	var q := Progress.new()
+	q.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
+	assert_eq([q.streak, q.streak_best, q.streak_pending], [3, 5, true], "salvo")
+	var fresh = q.reset_keeping_settings()
+	assert_eq([fresh.streak, fresh.streak_best, fresh.streak_pending], [0, 0, false])

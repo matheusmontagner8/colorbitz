@@ -1,5 +1,5 @@
-## Opções: som, música, vibração, efeitos reduzidos, modo daltônico (salvos no progresso) e
-## apagar o progresso (com confirmação).
+## Opções: som, música, vibração, efeitos reduzidos, modo daltônico (salvos no progresso),
+## apagar o progresso (com confirmação) e a tela "Sobre" (versão, licenças, privacidade).
 extends Control
 
 const OverlayPanel = preload("res://scripts/ui/overlay_panel.gd")
@@ -7,7 +7,6 @@ const Fx = preload("res://scripts/fx.gd")
 const I18n = preload("res://scripts/i18n.gd")
 
 const DANGER_COLOR := Color("#FF4F4F")
-const PRIVACY_URL := "https://github.com/matheusmontagner8/colorbitz/blob/main/PRIVACY.md"
 
 ## Confirmação de "Apagar progresso" (null quando fechada).
 var confirm: Control
@@ -23,14 +22,7 @@ func _ready() -> void:
 	%LanguageButton.pressed.connect(_next_language)
 	%ResetButton.pressed.connect(_ask_reset)
 	%BackButton.pressed.connect(GameState.go_to_menu)
-	var privacy := LinkButton.new()
-	privacy.text = "Política de privacidade"
-	privacy.underline = LinkButton.UNDERLINE_MODE_ALWAYS
-	privacy.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	privacy.add_theme_font_size_override("font_size", 26)
-	privacy.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
-	privacy.pressed.connect(func(): OS.shell_open(PRIVACY_URL))
-	%BackButton.add_sibling(privacy)
+	%AboutButton.pressed.connect(GameState.go_to_about)
 	_refresh()
 
 

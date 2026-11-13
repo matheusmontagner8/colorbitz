@@ -21,7 +21,7 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="Center/VBox"]
 layout_mode = 2
@@ -30,58 +30,64 @@ text = "Opções"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 32)
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
 [node name="SoundButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 text = "Som: ligado"
 
 [node name="MusicButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 text = "Música: ligada"
 
 [node name="VibrationButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 text = "Vibração: ligada"
 
 [node name="EffectsButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 text = "Efeitos: completos"
 
 [node name="ColorblindButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 text = "Daltonismo: desligado"
 
 [node name="LanguageButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 text = "Idioma: Português"
 
 [node name="ResetButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
 text = "Apagar progresso"
 
+[node name="AboutButton" type="Button" parent="Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 92)
+layout_mode = 2
+text = "Sobre"
+
 [node name="Spacer2" type="Control" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 32)
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
 [node name="BackButton" type="Button" parent="Center/VBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(480, 104)
+custom_minimum_size = Vector2(480, 92)
 layout_mode = 2
 text = "Voltar"

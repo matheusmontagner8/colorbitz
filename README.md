@@ -77,6 +77,8 @@ antes de acabarem as jogadas.
     Platina, Diamante e Neon, cada uma com prêmio; a atual aparece no menu.
   - **Baú de estrelas**: as estrelas do modo infinito enchem o baú, que abre a cada 30 com um
     prêmio sorteado (às vezes em dobro). A tela de fases mostra a patente, o próximo chefe e o baú.
+  - **Sequência de vitórias**: vencer fases novas seguidas; a cada 5, +1 de cada poder. Perder,
+    reiniciar ou sair no meio zera (a pausa avisa antes), e o recorde fica na tela de fases.
 - **Conquistas** (16): por exemplo "criar 25 bombas", "vencer 10 fases sem usar poderes",
   "vencer 7 fases diárias". Cada uma dá poderes e aparece num aviso na hora em que é liberada.
 - **Cartões de apresentação** ([`scripts/intros.gd`](scripts/intros.gd)): na primeira vez que
@@ -87,7 +89,14 @@ antes de acabarem as jogadas.
 - **Opções**: som, música, vibração, **efeitos reduzidos** (sem tremor de tela nem ondas
   de choque e com menos partículas, para quem é sensível a movimento), **daltonismo**
   (troca a paleta e deixa os símbolos maiores e brancos), **idioma**
-  (português ou inglês; começa no idioma do celular) e **apagar progresso** (com confirmação).
+  (português ou inglês; começa no idioma do celular), **apagar progresso** (com confirmação)
+  e **Sobre**: versão, "Relatar problema" (abre uma issue no GitHub já com a versão e o
+  aparelho), política de privacidade e as licenças do Godot e da fonte.
+- **Save protegido**: cada gravação vai para um arquivo temporário e o save anterior vira
+  uma cópia de segurança, usada se o principal estragar. O backup do Android está ligado,
+  então o progresso acompanha o jogador num celular novo.
+- **Telas com entalhe**: as telas encolhem para fora do entalhe da câmera e da barra de gestos
+  ([`scripts/safe_area.gd`](scripts/safe_area.gd)), com teste simulando um entalhe.
 - Na derrota, a tela mostra **quanto faltou** ("Faltou: 180 pontos" ou o bloco da cor com o
   número) e uma barra com quanto da meta foi feito; acima de 80% aparece "Quase!".
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
@@ -187,9 +196,9 @@ adb install -r build/colorbitz-debug.apk   # celular ligado no USB com depuraç�
 assets/    tema, fonte e áudio gerado
 data/      fases (levels.json)
 docs/      imagens do README
-scenes/    cenas: menu, seleção de fases, conquistas, opções e jogo
+scenes/    cenas: menu, seleção de fases, conquistas, opções, sobre e jogo
 scripts/   lógica pura (board, game_session, progress, level_loader, daily, endless,
-           achievements, i18n),
+           achievements, i18n, intros, safe_area),
            autoloads GameState e Audio, tela de jogo (game_view) e efeitos (fx)
 scripts/ui telas (menu, fases, conquistas, opções) e componentes da tela de jogo:
            game_hud, power_bar, board_fx, tip_balloon, pause_menu, result_panel,
@@ -208,6 +217,8 @@ tools/     teste de fumaça, simulador de dificuldade, gerador de áudio e de í
 - [x] Teste em celular Android real
 - [x] **Antes da loja**: componentes da tela de jogo, inglês, efeitos reduzidos, apagar
       progresso, política de privacidade, modo daltônico, ícones do app e "quanto faltou" na derrota
+- [x] **Antes do teste fechado**: cópia de segurança do save, tela Sobre com versão e licenças,
+      área segura (entalhe), sequência de vitórias no modo infinito
 - [ ] **Semana 4**: anúncios e publicação na Google Play (teste fechado)
 
 ## Privacidade

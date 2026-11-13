@@ -7,6 +7,10 @@ const Achievements = preload("res://scripts/achievements.gd")
 const Endless = preload("res://scripts/endless.gd")
 
 const SAVE_VERSION := 1
+const BACKUP_SUFFIX := ".bak"
+
+## O último [method load_from] usou a cópia de segurança (o save estava estragado).
+var loaded_from_backup := false
 
 ## id da fase (String) -> melhor número de estrelas (1..3)
 var stars: Dictionary = {}
@@ -41,6 +45,11 @@ var daily_best_score := 0
 ## (índice em Endless.RANKS; -1 = nenhuma).
 var chests_opened := 0
 var rank_claimed := -1
+## Sequência de vitórias do infinito (só fases ainda não vencidas contam),
+## recorde e se há uma tentativa em andamento (abandonar no meio zera).
+var streak := 0
+var streak_best := 0
+var streak_pending := false
 
 ## Contadores para as conquistas (veja [method add_stats]).
 var stats: Dictionary = {}
@@ -129,9 +138,24 @@ func claim_endless_rewards(level_number: int, first_win: bool, campaign_size: in
 	while chests_opened < full:
 		chests_opened += 1
 		found.append({"kind": "chest", "reward": Endless.chest_prize(chests_opened)})
+	streak_pending = false
+	if first_win:
+		streak += 1
+		streak_best = maxi(streak_best, streak)
+		if streak % Endless.STREAK_STEP == 0:
+			found.append({"kind": "streak", "count": streak, "reward": Endless.STREAK_REWARD.duplicate()})
 	for r in found:
 		add_powers(r.reward)
 	return found
+
+
+## Zera a sequência de vitórias (derrota ou fase abandonada no meio).
+## Retorna o tamanho da sequência perdida.
+func break_streak() -> int:
+	var lost := streak
+	streak = 0
+	streak_pending = false
+	return lost
 
 
 ## Estrelas no baú atual (0 até Endless.CHEST_STARS - 1).
@@ -293,7 +317,8 @@ func to_dict() -> Dictionary:
 			"claim_day": daily_claim_day, "streak": daily_streak, "won_day": daily_won_day,
 			"best_day": daily_best_day, "best_score": daily_best_score,
 		},
-		"endless": {"chests": chests_opened, "rank": rank_claimed},
+		"endless": {"chests": chests_opened, "rank": rank_claimed, "streak": streak,
+			"streak_best": streak_best, "streak_pending": streak_pending},
 		"stats": stats.duplicate(),
 		"achievements": achievements.keys(),
 		"tutorials": tutorials.keys(),
@@ -324,6 +349,9 @@ func from_dict(data: Dictionary) -> void:
 		endless = {}
 	chests_opened = maxi(0, int(endless.get("chests", 0)))
 	rank_claimed = clampi(int(endless.get("rank", -1)), -1, Endless.RANKS.size() - 1)
+	streak = maxi(0, int(endless.get("streak", 0)))
+	streak_best = maxi(streak, int(endless.get("streak_best", 0)))
+	streak_pending = bool(endless.get("streak_pending", false))
 	var daily = data.get("daily", {})
 	if typeof(daily) != TYPE_DICTIONARY:
 		daily = {}
@@ -359,7 +387,9 @@ func from_dict(data: Dictionary) -> void:
 
 
 ## Grava primeiro em um arquivo temporário e depois troca, para não
-## corromper o save se o app for fechado no meio da gravação.
+## corromper o save se o app for fechado no meio da gravação. O save anterior
+## vira a cópia de segurança (path + BACKUP_SUFFIX), usada por [method load_from]
+## se o principal estragar.
 func save_to(path: String) -> Error:
 	var tmp := path + ".tmp"
 	var file := FileAccess.open(tmp, FileAccess.WRITE)
@@ -367,18 +397,41 @@ func save_to(path: String) -> Error:
 		return FileAccess.get_open_error()
 	file.store_string(JSON.stringify(to_dict(), "\t"))
 	file.close()
+	if _read_save(path).is_empty():
+		# Principal ausente ou estragado: não pode virar a cópia (apagaria a boa).
+		DirAccess.remove_absolute(path)
+	else:
+		DirAccess.remove_absolute(path + BACKUP_SUFFIX)
+		var err := DirAccess.rename_absolute(path, path + BACKUP_SUFFIX)
+		if err != OK:
+			return err
 	return DirAccess.rename_absolute(tmp, path)
 
 
-## Carrega o save. Se não existir ou estiver corrompido, começa do zero.
-## Retorna true se carregou um save válido.
+## Carrega o save. Se o principal não existir ou estiver estragado, tenta a
+## cópia de segurança ([member loaded_from_backup] fica true); sem nenhum dos
+## dois, começa do zero. Retorna true se carregou um save válido.
 func load_from(path: String) -> bool:
 	from_dict({})
-	if not FileAccess.file_exists(path):
-		return false
-	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if typeof(data) != TYPE_DICTIONARY:
-		push_warning("Save corrompido em %s; começando do zero." % path)
-		return false
+	loaded_from_backup = false
+	var data := _read_save(path)
+	if data.is_empty():
+		data = _read_save(path + BACKUP_SUFFIX)
+		if data.is_empty():
+			if FileAccess.file_exists(path):
+				push_warning("Save estragado em %s e sem cópia; começando do zero." % path)
+			return false
+		push_warning("Save ausente ou estragado em %s; usando a cópia de segurança." % path)
+		loaded_from_backup = true
 	from_dict(data)
 	return true
+
+
+## Conteúdo do arquivo de save ({} se não existir ou não for um save válido).
+static func _read_save(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(data) != TYPE_DICTIONARY or not data.has("version"):
+		return {}
+	return data

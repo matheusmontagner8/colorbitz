@@ -7,7 +7,7 @@ const LEVELS := [{"id": 1}, {"id": 2}, {"id": 3}]
 
 
 func _cleanup() -> void:
-	for p in [TEST_PATH, TEST_PATH + ".tmp"]:
+	for p in [TEST_PATH, TEST_PATH + ".tmp", TEST_PATH + Progress.BACKUP_SUFFIX]:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(p)
 
@@ -114,6 +114,7 @@ func test_missing_save_starts_fresh() -> void:
 
 
 func test_corrupted_save_starts_fresh() -> void:
+	_cleanup()
 	var f := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	f.store_string("{isso não é json")
 	f.close()
@@ -121,6 +122,56 @@ func test_corrupted_save_starts_fresh() -> void:
 	p.record_result(1, 3)
 	assert_false(p.load_from(TEST_PATH))
 	assert_eq(p.total_stars(), 0, "estado anterior é descartado")
+	assert_false(p.loaded_from_backup)
+	_cleanup()
+
+
+func _write(path: String, text: String) -> void:
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(text)
+	f.close()
+
+
+func test_backup_keeps_previous_save() -> void:
+	_cleanup()
+	var p := Progress.new()
+	p.record_result(1, 2)
+	assert_eq(p.save_to(TEST_PATH), OK)
+	assert_false(FileAccess.file_exists(TEST_PATH + Progress.BACKUP_SUFFIX), "primeiro save: sem cópia ainda")
+	p.record_result(2, 3)
+	assert_eq(p.save_to(TEST_PATH), OK)
+	var backup := Progress.new()
+	assert_true(backup.load_from(TEST_PATH + Progress.BACKUP_SUFFIX), "cópia é o save anterior")
+	assert_eq(backup.total_stars(), 2)
+	# O principal estraga (ex.: celular desligou na hora errada): usa a cópia.
+	_write(TEST_PATH, "{meio arquivo")
+	var q := Progress.new()
+	assert_true(q.load_from(TEST_PATH))
+	assert_true(q.loaded_from_backup)
+	assert_eq(q.total_stars(), 2)
+	# Salvar de novo não troca a cópia boa pelo arquivo estragado.
+	q.record_result(3, 1)
+	assert_eq(q.save_to(TEST_PATH), OK)
+	assert_true(backup.load_from(TEST_PATH + Progress.BACKUP_SUFFIX))
+	assert_eq(backup.total_stars(), 2, "cópia continua a boa")
+	var r := Progress.new()
+	assert_true(r.load_from(TEST_PATH))
+	assert_false(r.loaded_from_backup)
+	assert_eq(r.total_stars(), 3)
+	_cleanup()
+
+
+func test_main_save_missing_uses_backup() -> void:
+	_cleanup()
+	var p := Progress.new()
+	p.record_result(1, 3)
+	assert_eq(p.save_to(TEST_PATH + Progress.BACKUP_SUFFIX), OK)
+	var q := Progress.new()
+	assert_true(q.load_from(TEST_PATH), "app fechado entre as duas trocas de arquivo")
+	assert_eq(q.stars_for(1), 3)
+	_write(TEST_PATH, "[1, 2]")  # JSON válido, mas não é um save
+	assert_true(q.load_from(TEST_PATH))
+	assert_true(q.loaded_from_backup)
 	_cleanup()
 
 

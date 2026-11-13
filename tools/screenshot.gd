@@ -7,6 +7,7 @@ extends SceneTree
 const Progress = preload("res://scripts/progress.gd")
 const Intros = preload("res://scripts/intros.gd")
 const BlockView = preload("res://scripts/block_view.gd")
+const SafeArea = preload("res://scripts/safe_area.gd")
 ## Dia fixo (12/11/2026) para as capturas da fase diária saírem sempre iguais.
 const DEMO_DAY := 20769
 
@@ -512,6 +513,74 @@ func _initialize() -> void:
 	assert(current_scene.find_child("RankBadge", true, false) != null, "selo da patente no menu")
 	await _save("res://docs/menu_rank.png")
 	print("chefe, patente e baú: ok")
+
+	# Sequência de vitórias: 61 e 70 contaram; jogar a 71 e pausar avisa que sair zera.
+	assert(progress.streak == 2, "61 e chefe contaram na sequência (%d)" % progress.streak)
+	_gs.current_index = 70
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	game = current_scene
+	game._intro.visible = false
+	_gs.mark_streak_attempt()  # como depois da primeira jogada
+	game._pause()
+	await _frames(3)
+	assert(game._pause_menu._warning.visible and game._pause_menu._warning.text.contains("sequência de 2 vitórias."), "aviso na pausa")
+	await _save("res://docs/pause_streak.png")
+	game._resume()
+	game._intro.open("streak")
+	await create_timer(0.5).timeout
+	await _save("res://docs/intro_streak.png")
+	game._intro.visible = false
+	game._session.status = game.GameSession.Status.WON
+	game._finish()
+	await create_timer(4.5).timeout
+	assert(game._result.info_label.text.begins_with("Sequência: 3 vitórias seguidas!"), "sequência no resultado (%s)" % game._result.info_label.text)
+	await _save("res://docs/streak_result.png")
+	_gs.current_index = 71
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	_gs.mark_streak_attempt()
+	_gs.go_to_level_select()  # sair no meio zera
+	await _frames(6)
+	assert(progress.streak == 0 and progress.streak_best == 3, "abandonar zera, recorde fica")
+	texts = current_scene.find_children("*", "Label", true, false).map(func(l): return l.text)
+	assert("Sequência: 0  ·  recorde 3" in texts, "sequência na tela de fases")
+	await _save("res://docs/streak_levels.png")
+	print("sequência de vitórias: ok")
+
+	# Sobre: versão, botões e licenças (componentes do Godot só ao pedir).
+	change_scene_to_file("res://scenes/options.tscn")
+	await _frames(6)
+	current_scene.get_node("%AboutButton").pressed.emit()
+	await _frames(6)
+	var about = current_scene
+	assert(about.name == "About", "Opções -> Sobre")
+	texts = about.find_children("*", "Label", true, false).map(func(l): return l.text)
+	assert(("Versão " + _gs.version()) in texts, "versão na tela")
+	assert(texts.any(func(t): return t.contains("Juan Linietsky")), "licença do Godot")
+	assert(about.issue_url().contains(_gs.version().uri_encode()), "issue com a versão")
+	await _save("res://docs/about.png")
+	var before: int = about.get_node("%List").get_child_count()
+	about.third_party_button.pressed.emit()
+	await _frames(3)
+	assert(about.get_node("%List").get_child_count() > before + 5, "componentes de terceiros")
+	print("sobre: ok")
+
+	# Entalhe da câmera simulado: a cena encolhe e o fundo continua na tela toda.
+	SafeArea.simulated = {"left": 0.0, "top": 90.0, "right": 0.0, "bottom": 50.0}
+	_gs.current_index = 31
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	assert(current_scene.offset_top == 90.0 and current_scene.offset_bottom == -50.0, "cena dentro da área segura")
+	await _save("res://docs/notch_game.png")
+	change_scene_to_file("res://scenes/level_select.tscn")
+	await _frames(6)
+	assert(current_scene.offset_top == 90.0, "vale para todas as telas")
+	await _save("res://docs/notch_levels.png")
+	SafeArea.simulated = {}
+	_gs.apply_safe_area()
+	assert(current_scene.offset_top == 0.0, "sem entalhe de novo")
+	print("área segura: ok")
 
 	# Opções: trocar o idioma pela tela muda os textos na hora.
 	change_scene_to_file("res://scenes/options.tscn")

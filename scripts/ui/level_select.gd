@@ -107,6 +107,7 @@ func _add_endless_button() -> void:
 		var chest := ChestBar.new(260.0)
 		chest.set_stars(GameState.chest_stars())
 		box.add_child(chest)
+		box.add_child(_streak_status())
 	else:
 		var hint := Label.new()
 		hint.text = "Cada fase múltipla de 5 revela uma letra"
@@ -132,6 +133,21 @@ func _endless_status(next_level: int) -> HBoxContainer:
 	row.add_child(gap)
 	row.add_child(BadgeIcon.new("crown", BadgeIcon.GOLD, 48.0))
 	_small_label(row, BadgeIcon.GOLD).text = tr("Chefe: fase %d") % Endless.next_boss(next_level)
+	return row
+
+
+## Linha "chama + sequência de vitórias (recorde)" do modo infinito.
+func _streak_status() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	var p = GameState.progress
+	var col := BadgeIcon.FLAME if p.streak > 0 else Color(1, 1, 1, 0.45)
+	row.add_child(BadgeIcon.new("flame", col, 44.0))
+	var text := tr("Sequência: %d") % p.streak
+	if p.streak_best > 0:
+		text += "  ·  " + tr("recorde %d") % p.streak_best
+	_small_label(row, col).text = text
 	return row
 
 

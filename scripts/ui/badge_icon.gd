@@ -1,10 +1,12 @@
 ## Ícones desenhados do modo infinito (sem depender de emoji na fonte):
-## "medal" (patente, na cor dela), "chest" (baú de estrelas) e "crown" (fase chefe).
+## "medal" (patente, na cor dela), "chest" (baú de estrelas), "crown" (fase
+## chefe) e "flame" (sequência de vitórias).
 extends Control
 
 const StarsView = preload("res://scripts/ui/stars_view.gd")
 
 const GOLD := Color("#FFD54A")
+const FLAME := Color("#FF9A3D")
 
 var kind := "medal":
 	set(value):
@@ -32,6 +34,8 @@ func _draw() -> void:
 			_chest(o, k)
 		"crown":
 			_crown(o, k)
+		"flame":
+			_flame(o, k)
 		_:
 			_medal(o, k)
 
@@ -82,6 +86,29 @@ func _crown(o: Vector2, k: float) -> void:
 	draw_circle(o + Vector2(50, 60) * k, 7 * k, Color("#FF4FD8"))
 	draw_circle(o + Vector2(32, 64) * k, 5 * k, Color("#3DE0FF"))
 	draw_circle(o + Vector2(68, 64) * k, 5 * k, Color("#2BFF88"))
+
+
+## Chama (sequência de vitórias): gota pontuda na cor, com miolo claro.
+func _flame(o: Vector2, k: float) -> void:
+	draw_circle(o + Vector2(50, 60) * k, 44 * k, Color(color, 0.14))
+	draw_colored_polygon(_drop(o, k, Vector2(50, 64), 30.0, 52.0), color)
+	draw_colored_polygon(_drop(o, k, Vector2(50, 74), 16.0, 30.0), Color("#FFE53D"))
+
+
+## Gota com a ponta para cima: semicírculo embaixo (centro [param c], raio
+## [param r]) e laterais curvas até a ponta, [param h] acima do centro.
+func _drop(o: Vector2, k: float, c: Vector2, r: float, h: float) -> PackedVector2Array:
+	var pts := []
+	for i in 13:  # metade de baixo do círculo, da direita para a esquerda
+		var a := PI * i / 12.0
+		pts.append(c + Vector2(cos(a), sin(a)) * r)
+	for i in range(1, 9):  # lado esquerdo subindo até a ponta
+		var t := i / 8.0
+		pts.append(c + Vector2(-r * (1.0 - t) * (1.0 - t * 0.35), -h * t))
+	for i in range(7, 0, -1):  # lado direito descendo
+		var t := i / 8.0
+		pts.append(c + Vector2(r * (1.0 - t) * (1.0 - t * 0.35) + 4.0 * t, -h * t))
+	return _pts(o, k, pts)
 
 
 func _pts(o: Vector2, k: float, points: Array) -> PackedVector2Array:

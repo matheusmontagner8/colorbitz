@@ -9,6 +9,7 @@ const Fx = preload("res://scripts/fx.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const Endless = preload("res://scripts/endless.gd")
 const BlockView = preload("res://scripts/block_view.gd")
+const SafeArea = preload("res://scripts/safe_area.gd")
 
 const SAVE_PATH := "user://save.json"
 const SCENE_MENU := "res://scenes/main_menu.tscn"
@@ -16,6 +17,7 @@ const SCENE_LEVEL_SELECT := "res://scenes/level_select.tscn"
 const SCENE_GAME := "res://scenes/game.tscn"
 const SCENE_OPTIONS := "res://scenes/options.tscn"
 const SCENE_ACHIEVEMENTS := "res://scenes/achievements.tscn"
+const SCENE_ABOUT := "res://scenes/about.tscn"
 const TOAST_COLOR := Color("#FFE53D")
 const TOAST_TIME := 2.6
 
@@ -42,10 +44,32 @@ func _ready() -> void:
 	progress.load_from(SAVE_PATH)
 	I18n.apply(progress.language)
 	apply_settings()
+	abandon_streak_attempt()  # o app foi fechado no meio de uma fase
 	add_child(preload("res://scripts/ui/neon_background.gd").new())
 	_toast_layer = CanvasLayer.new()
 	_toast_layer.layer = 50
 	add_child(_toast_layer)
+	get_tree().scene_changed.connect(apply_safe_area)
+	get_viewport().size_changed.connect(apply_safe_area)
+	apply_safe_area.call_deferred()  # a primeira cena ainda não entrou na árvore
+	if progress.loaded_from_backup:
+		show_toast.call_deferred(tr("Progresso recuperado"), tr("O save estava estragado; usamos a cópia."))
+
+
+## Versão do jogo (application/config/version, igual à do export Android).
+static func version() -> String:
+	return str(ProjectSettings.get_setting("application/config/version", "?"))
+
+
+## Encolhe a cena atual para fora do entalhe da câmera e da barra de gestos.
+func apply_safe_area() -> void:
+	var scene := get_tree().current_scene as Control
+	if scene:
+		SafeArea.apply(scene, safe_insets())
+
+
+func safe_insets() -> Dictionary:
+	return SafeArea.current(get_viewport())
 
 
 ## Vibração do celular (se ligada nas opções). Sem efeito no PC.
@@ -204,7 +228,7 @@ func _run_toasts() -> void:
 		panel.position = Vector2((w - panel.size.x) / 2.0, -panel.size.y - 10.0)
 		Audio.play_sfx("star", 1.3)
 		var t := panel.create_tween()
-		t.tween_property(panel, "position:y", 36.0, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t.tween_property(panel, "position:y", 36.0 + float(safe_insets().top), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		t.tween_interval(TOAST_TIME)
 		t.tween_property(panel, "position:y", -panel.size.y - 10.0, 0.25)
 		await t.finished
@@ -284,8 +308,43 @@ func _set_bus_mute(bus_name: String, mute: bool) -> void:
 # --- Navegação ---------------------------------------------------------------
 
 func go_to(scene_path: String) -> void:
+	abandon_streak_attempt()  # saiu de uma fase do infinito no meio
 	get_tree().paused = false
 	get_tree().change_scene_to_file(scene_path)
+
+
+func go_to_about() -> void:
+	go_to(SCENE_ABOUT)
+
+
+# --- Sequência de vitórias do infinito -------------------------------------------
+
+## A fase atual conta para a sequência (fase do infinito ainda não vencida)?
+func counts_for_streak() -> bool:
+	return is_endless() and progress.stars_for(int(current_level().get("id", current_index + 1))) == 0
+
+
+## Primeira jogada numa fase que conta: a partir daqui, sair zera a sequência.
+func mark_streak_attempt() -> void:
+	if counts_for_streak() and not progress.streak_pending:
+		progress.streak_pending = true
+		save()
+
+
+## Derrota na fase atual: zera a sequência se ela contava. Retorna a perdida.
+func lose_streak() -> int:
+	if not counts_for_streak():
+		return 0
+	var lost: int = progress.break_streak()
+	save()
+	return lost
+
+
+## Tentativa abandonada (reiniciar, sair ou fechar o app no meio): zera.
+func abandon_streak_attempt() -> void:
+	if progress.streak_pending:
+		progress.break_streak()
+		save()
 
 
 func go_to_menu() -> void:

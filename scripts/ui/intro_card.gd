@@ -71,6 +71,8 @@ func open(card_id: String, goal_colors: Array = [], arg: int = 0) -> void:
 			_add_hole()
 		elif icon is String and icon in ["chest", "crown", "medal"]:
 			_icons.add_child(BadgeIcon.new(icon, BadgeIcon.GOLD, ICON_SIZE))
+		elif icon is String and icon == "flame":
+			_icons.add_child(BadgeIcon.new(icon, BadgeIcon.FLAME, ICON_SIZE))
 		elif icon is String:  # "ice" / "ice2": bloco congelado
 			_add_block(0, 2 if icon == "ice2" else 1)
 		else:

@@ -24,6 +24,7 @@ const NEON_CYAN := Color("#3DE0FF")
 const MOVES_COLOR := Color("#FFE53D")
 ## Fase chefe do modo infinito: borda dourada no tabuleiro e no título.
 const BOSS_COLOR := Color("#FFD54A")
+const STREAK_COLOR := Color("#FF9A3D")
 const DANGER_COLOR := Color("#FF3B3B")
 const HUD_HEIGHT := 252.0
 const POWER_BAR_HEIGHT := 150.0
@@ -176,6 +177,7 @@ func _leave() -> void:
 # --- Ciclo da fase ------------------------------------------------------------
 
 func _start_level() -> void:
+	GameState.abandon_streak_attempt()  # reiniciou no meio
 	_generation += 1
 	_busy = false
 	get_tree().paused = false
@@ -300,6 +302,12 @@ func _pause() -> void:
 	if _result.visible:
 		return
 	get_tree().paused = true
+	var streak: int = GameState.progress.streak
+	var warning := ""
+	if GameState.progress.streak_pending and streak > 0:
+		warning = tr("Sair ou reiniciar agora zera\nsua sequência de 1 vitória.") if streak == 1 \
+			else tr("Sair ou reiniciar agora zera\nsua sequência de %d vitórias.") % streak
+	_pause_menu.set_warning(warning)
 	_pause_menu.visible = true
 
 
@@ -395,6 +403,7 @@ func _after_move() -> void:
 	_busy = false
 	if _tutorial:
 		_tutorial.on_move_finished()
+	GameState.mark_streak_attempt()  # sair da fase agora zera a sequência
 	# Estatísticas das conquistas: soma a cada jogada; no fim da fase, salva.
 	GameState.record_stats(_session.take_stats(), _session.status != GameSession.Status.PLAYING)
 	_power_bar.hide_shuffle()
@@ -818,6 +827,8 @@ func _finish() -> void:
 		and GameState.progress.stars_for(level_number) == 0
 	var endless: bool = GameState.is_endless()
 	var chest_before: int = GameState.chest_stars()
+	var streak_level: bool = GameState.counts_for_streak()
+	var lost_streak := 0
 	var rewards: Array = []
 	if won:
 		var gained := GameState.complete_current_level(stars, _session.score)  # salva antes da animação do bônus
@@ -836,6 +847,7 @@ func _finish() -> void:
 			GameState.update_daily_best(_session.score)  # recorde do dia já com o bônus
 		Audio.play_sfx("win")
 	else:
+		lost_streak = GameState.lose_streak()
 		Audio.play_sfx("lose")
 	var score_text := tr("Pontos: %d") % _session.score
 	if _session.end_bonus > 0:
@@ -847,6 +859,8 @@ func _finish() -> void:
 	var revealed: int = GameState.letters_revealed()
 	if new_letter and info[0] == "":
 		info = [tr("Nova letra: %s!") % phrase.replace(" ", "")[revealed - 1], Color("#2BFF88")]
+	if streak_level and info[0] == "":
+		info = _streak_info(won, lost_streak)
 	_result.set_texts(won, score_text, power_text, info[0], info[1])
 	_result.next_button.visible = has_next and GameState.is_unlocked(next)
 	_result.back_button.text = "Menu" if GameState.daily_mode else "Fases"
@@ -889,7 +903,22 @@ func _endless_reward_text(rewards: Array) -> String:
 				lines.append(tr("Nova patente: %s! %s") % [tr(Endless.RANKS[int(r.rank)].name), prize])
 			"chest":
 				lines.append(tr("Baú aberto! %s") % prize)
+			"streak":
+				lines.append(tr("%d vitórias seguidas! %s") % [int(r.count), prize])
 	return "\n".join(lines)
+
+
+## Sequência de vitórias depois de uma fase que contava. [texto, cor]
+func _streak_info(won: bool, lost: int) -> Array:
+	if won:
+		var streak: int = GameState.progress.streak
+		var left: int = Endless.STREAK_STEP - streak % Endless.STREAK_STEP
+		var head := tr("Sequência: 1 vitória!") if streak == 1 else tr("Sequência: %d vitórias seguidas!") % streak
+		var tail := tr("Mais 1 para o próximo prêmio.") if left == 1 else tr("Mais %d para o próximo prêmio.") % left
+		return [head + "\n" + tail, STREAK_COLOR]
+	if lost >= 2:
+		return [tr("Você perdeu uma sequência\nde %d vitórias.") % lost, STREAK_COLOR]
+	return ["", Color.WHITE]
 
 
 ## Fase diária: recorde do dia e se o prêmio já foi ganho. [texto, cor]

@@ -46,6 +46,11 @@ const CHEST_PRIZES := [
 	{"weight": 8, "reward": {"hammer": 2, "swap": 2}},
 ]
 
+## Sequência de vitórias: vencer fases novas do infinito seguidas, sem perder
+## nem abandonar no meio. A cada STREAK_STEP vitórias seguidas, um prêmio.
+const STREAK_STEP := 5
+const STREAK_REWARD := {"hammer": 1, "swap": 1}
+
 
 ## A fase revela uma letra da palavra ao ser vencida pela primeira vez?
 static func gives_letter(level_number: int) -> bool:
