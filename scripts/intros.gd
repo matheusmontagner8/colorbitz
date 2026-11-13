@@ -39,7 +39,7 @@ const CARDS := {
 	"daily": {"title": "Fase diária", "icon": [4, 0, 3],
 		"text": "Um desafio novo todo dia, igual para\ntodos os jogadores. Você pode tentar\nquantas vezes quiser: a primeira vitória\ndo dia vale +1 Martelo e +1 Troca."},
 	"endless": {"title": "Modo infinito", "icon": [5, 2, 1],
-		"text": "Parabéns! Agora as fases continuam\npara sempre, cada uma com um desafio.\nAs estrelas continuam valendo poderes."},
+		"text": "Parabéns! Agora as fases continuam\npara sempre, cada uma com um desafio.\nVá o mais longe que conseguir!"},
 	"endless_goals": {"title": "Metas do infinito", "icon": ["chest", "crown", "medal"],
 		"text": "Cada estrela enche o baú: com 30\nestrelas ele abre e dá poderes.\nA cada 10 fases vem uma fase chefe.\nVencer chefes dá patentes: Bronze,\nPrata, Ouro e outras ainda maiores."},
 	"boss": {"title": "Fase chefe!", "icon": ["crown"],

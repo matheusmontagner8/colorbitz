@@ -152,20 +152,18 @@ func reset_progress() -> void:
 
 
 ## Registra uma vitória na fase atual (ou na diária) e salva.
-## Retorna quantos poderes de cada tipo o jogador ganhou (estrelas novas ou
-## primeira vitória do dia na fase diária). No modo infinito, os prêmios de
-## chefe, patente e baú ficam em [member last_rewards].
+## Retorna quantos poderes de cada tipo o jogador ganhou (primeira vitória do
+## dia na fase diária). No modo infinito, os prêmios de chefe, patente, baú e
+## sequência ficam em [member last_rewards].
 func complete_current_level(stars: int, score: int = 0) -> int:
 	var gained := 0
 	last_rewards = []
 	if daily_mode:
 		gained = progress.record_daily_win(today(), score)
 	else:
-		var before: int = progress.powers_granted()
 		var id := int(current_level().get("id", current_index + 1))
 		var first_win: bool = progress.stars_for(id) == 0
 		progress.record_result(id, stars)
-		gained = progress.powers_granted() - before
 		if is_endless():
 			last_rewards = progress.claim_endless_rewards(id, first_win, levels.size())
 	check_achievements()

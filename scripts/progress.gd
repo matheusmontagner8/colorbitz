@@ -6,7 +6,8 @@ const Daily = preload("res://scripts/daily.gd")
 const Achievements = preload("res://scripts/achievements.gd")
 const Endless = preload("res://scripts/endless.gd")
 
-const SAVE_VERSION := 1
+## 2: estrelas deixaram de dar poderes (veja [method _migrate]).
+const SAVE_VERSION := 2
 const BACKUP_SUFFIX := ".bak"
 
 ## O último [method load_from] usou a cópia de segurança (o save estava estragado).
@@ -24,13 +25,16 @@ var colorblind := false
 var language := ""
 
 ## Poderes especiais que o jogador usa quando quiser (decisão de design):
-## começa com POWER_START de cada e ganha +1 de cada a cada POWER_STARS_STEP
-## estrelas. Guardamos só quantos foram usados; o saldo é calculado.
+## começa com POWER_START de cada; os outros vêm de prêmios (recompensa e fase
+## diária, conquistas, chefes, patentes, baú e sequência). Estrelas não dão
+## poderes (até a versão 0.5.0 davam +1 a cada 21; veja [method _migrate]).
+## Guardamos os ganhos e os usados; o saldo é calculado.
 const POWERS := ["hammer", "swap"]
 const POWER_START := 3
-const POWER_STARS_STEP := 21
+## Saves antigos: +1 de cada a cada OLD_POWER_STARS_STEP estrelas.
+const OLD_POWER_STARS_STEP := 21
 var powers_used: Dictionary = {}
-## Poderes extras ganhos fora das estrelas (recompensa diária, fase diária, conquistas).
+## Poderes ganhos em prêmios, somados aos POWER_START iniciais.
 var powers_bonus: Dictionary = {}
 
 ## Recompensa diária: último dia resgatado (Daily.day_number) e dias seguidos.
@@ -170,14 +174,9 @@ func total_stars() -> int:
 	return total
 
 
-## Quantos de cada poder o jogador já ganhou no total (iniciais + estrelas).
-func powers_granted() -> int:
-	return POWER_START + total_stars() / POWER_STARS_STEP
-
-
 ## Saldo atual do poder (nunca negativo).
 func power_count(power: String) -> int:
-	return maxi(0, powers_granted() + int(powers_bonus.get(power, 0)) - int(powers_used.get(power, 0)))
+	return maxi(0, POWER_START + int(powers_bonus.get(power, 0)) - int(powers_used.get(power, 0)))
 
 
 ## Soma poderes extras, ex.: {"hammer": 1, "swap": 2}.
@@ -193,11 +192,6 @@ func use_power(power: String) -> bool:
 		return false
 	powers_used[power] = int(powers_used.get(power, 0)) + 1
 	return true
-
-
-## Estrelas que faltam para ganhar o próximo poder de cada.
-func stars_to_next_power() -> int:
-	return POWER_STARS_STEP - total_stars() % POWER_STARS_STEP
 
 
 # --- Recompensa e fase diária -------------------------------------------------
@@ -384,6 +378,15 @@ func from_dict(data: Dictionary) -> void:
 		reduce_effects = bool(settings.get("reduce_effects", false))
 		colorblind = bool(settings.get("colorblind", false))
 		language = str(settings.get("language", ""))
+	_migrate(int(data.get("version", SAVE_VERSION)))
+
+
+## Atualiza saves de versões antigas.
+## Versão 1: as estrelas davam +1 de cada poder a cada 21; quem já tinha
+## ganhado esses poderes fica com eles (viram prêmio), mas não ganha mais.
+func _migrate(version: int) -> void:
+	if version < 2:
+		add_powers({"hammer": total_stars() / OLD_POWER_STARS_STEP, "swap": total_stars() / OLD_POWER_STARS_STEP})
 
 
 ## Grava primeiro em um arquivo temporário e depois troca, para não

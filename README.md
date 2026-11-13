@@ -50,7 +50,9 @@ antes de acabarem as jogadas.
 - **Poderes especiais** (usados quando o jogador quiser, sem gastar jogada):
   - **Martelo**: destrói um bloco à escolha (50 pontos; numa bomba, ela explode).
   - **Troca**: troca dois blocos quaisquer de lugar.
-  Começa com 3 de cada e ganha +1 de cada a cada 21 estrelas conquistadas. O saldo fica no save.
+  Começa com 3 de cada; os outros vêm de prêmios (recompensa e fase diária, conquistas e as
+  metas do modo infinito). Estrelas não dão poderes, para que eles fiquem escassos e valiosos.
+  O saldo fica no save.
   Na primeira fase jogada a partir da 2, um **tutorial guiado** escurece a tela e destaca o botão
   e os blocos que o jogador deve tocar para usar cada poder (usos grátis, só uma vez).
 - **Sem jogadas?** A fase não acaba: com poderes, o jogador pode usar o Martelo ou a Troca, ou

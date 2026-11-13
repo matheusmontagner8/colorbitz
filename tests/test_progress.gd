@@ -183,28 +183,37 @@ func test_from_dict_sanitizes_values() -> void:
 	assert_true(p.music_on)
 
 
-func test_powers_start_at_3_and_grow_every_21_stars() -> void:
+func test_powers_start_at_3_and_stars_do_not_give_more() -> void:
 	var p := Progress.new()
 	assert_eq(p.power_count("hammer"), 3)
 	assert_eq(p.power_count("swap"), 3)
-	for i in 5:
-		p.record_result(i + 1, 2)  # 10 estrelas
-	assert_eq(p.power_count("hammer"), 3)
-	assert_eq(p.stars_to_next_power(), 11)
-	p.record_result(6, 3)
-	p.record_result(7, 3)
-	p.record_result(8, 3)
-	p.record_result(9, 2)  # 21 estrelas
-	assert_eq(p.power_count("hammer"), 4)
-	assert_eq(p.power_count("swap"), 4)
-	for i in 4:
+	for i in 30:
+		p.record_result(i + 1, 3)  # 90 estrelas
+	assert_eq(p.power_count("hammer"), 3, "estrelas não dão poderes")
+	for i in 3:
 		assert_true(p.use_power("hammer"))
 	assert_false(p.use_power("hammer"), "sem saldo")
 	assert_eq(p.power_count("hammer"), 0)
-	assert_eq(p.power_count("swap"), 4, "cada poder tem o seu saldo")
-	for i in 7:
-		p.record_result(10 + i, 3)  # 42 estrelas
-	assert_eq(p.power_count("hammer"), 1, "ganha mais um ao chegar em 42")
+	assert_eq(p.power_count("swap"), 3, "cada poder tem o seu saldo")
+	p.add_powers({"hammer": 2})
+	assert_eq(p.power_count("hammer"), 2, "prêmios somam")
+
+
+func test_old_save_keeps_powers_earned_by_stars() -> void:
+	# Save da versão 1: 45 estrelas tinham dado +2 de cada (a cada 21).
+	var stars := {}
+	for i in 15:
+		stars[str(i + 1)] = 3
+	var p := Progress.new()
+	p.from_dict({"version": 1, "stars": stars, "powers_used": {"hammer": 4}, "powers_bonus": {"swap": 1}})
+	assert_eq(p.power_count("hammer"), 3 + 2 - 4, "o que já tinha continua")
+	assert_eq(p.power_count("swap"), 3 + 2 + 1)
+	for i in range(15, 30):
+		p.record_result(i + 1, 3)
+	assert_eq(p.power_count("hammer"), 1, "novas estrelas não dão mais")
+	var q := Progress.new()
+	q.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
+	assert_eq(q.power_count("swap"), 6, "migra uma vez só")
 
 
 func test_powers_used_survive_save() -> void:
