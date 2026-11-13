@@ -8,6 +8,10 @@ enum Status { PLAYING, WON, LOST }
 const DEFAULT_STAR_THRESHOLDS := [0.20, 0.40]
 ## Bônus de fim de fase: cada jogada que sobrou estoura um bloco e vale isto.
 const END_BONUS_POINTS := 100
+## [method shortfall]: parte da meta sem ícone (pontos ou blocos).
+const NO_ICON := -1
+
+const Board = preload("res://scripts/board.gd")
 
 var board  # board.gd
 var score := 0
@@ -179,6 +183,30 @@ func color_targets() -> Dictionary:
 
 func is_goal_met() -> bool:
 	return goal_progress() >= goal_target()
+
+
+## Quanto faltou para a meta (para a tela de derrota):
+## {"fraction": 0..1 da meta cumprida, "parts": [{"icon": int, "missing": int}]}.
+## icon é a cor do bloco, Board.GEM para joias, ou NO_ICON (pontos / blocos da meta "clear").
+func shortfall() -> Dictionary:
+	var parts := []
+	match goal_type():
+		"color":
+			var color := int(goal.get("color", 0))
+			parts.append({"icon": color, "missing": int(goal.get("count", 0)) - removed_of(color)})
+		"colors":
+			var targets := color_targets()
+			for c in targets:
+				parts.append({"icon": c, "missing": targets[c] - removed_of(c)})
+		"drop":
+			parts.append({"icon": Board.GEM, "missing": int(goal.get("count", 0)) - gems_collected})
+		"clear":
+			parts.append({"icon": NO_ICON, "missing": board.count_blocks() - int(goal.get("max_left", 0))})
+		_:
+			parts.append({"icon": NO_ICON, "missing": goal_target() - score})
+	parts = parts.filter(func(part): return part.missing > 0)
+	var fraction := clampf(float(goal_progress()) / maxf(goal_target(), 1.0), 0.0, 1.0)
+	return {"type": goal_type(), "fraction": fraction, "parts": parts}
 
 
 ## Estrelas conforme jogadas que sobraram (0 se não venceu).

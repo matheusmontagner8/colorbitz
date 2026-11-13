@@ -159,5 +159,13 @@
 	"Este tabuleiro tem buracos.\nOs blocos caem através deles\nnormalmente, como se não\nestivessem ali.": "This board has holes.\nBlocks fall through them\nnormally, as if they\nweren't there.",
 	"Um desafio novo todo dia, igual para\ntodos os jogadores. Você pode tentar\nquantas vezes quiser: a primeira vitória\ndo dia vale +1 Martelo e +1 Troca.": "A new challenge every day, the same\nfor every player. You can try\nas many times as you want: the first win\nof the day is worth +1 Hammer and +1 Swap.",
 	"Modo infinito": "Infinite mode",
-	"Parabéns! Agora as fases continuam\npara sempre, cada uma com um desafio.\nAs estrelas continuam valendo poderes.": "Congratulations! Now the levels go on\nforever, each one with a challenge.\nStars still earn you powers."
+	"Parabéns! Agora as fases continuam\npara sempre, cada uma com um desafio.\nAs estrelas continuam valendo poderes.": "Congratulations! Now the levels go on\nforever, each one with a challenge.\nStars still earn you powers.",
+	"Daltonismo: %s": "Colorblind: %s",
+	"Daltonismo: desligado": "Colorblind: off",
+	"Quase! Faltou:": "So close! Missing:",
+	"Faltou:": "Missing:",
+	"estourar 1 bloco": "pop 1 block",
+	"estourar %d blocos": "pop %d blocks",
+	"%d pontos": "%d points",
+	"Você fez %d%% da meta": "You reached %d%% of the goal"
 }

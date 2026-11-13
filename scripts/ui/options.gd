@@ -1,4 +1,4 @@
-## Opções: som, música, vibração, efeitos reduzidos (salvos no progresso) e
+## Opções: som, música, vibração, efeitos reduzidos, modo daltônico (salvos no progresso) e
 ## apagar o progresso (com confirmação).
 extends Control
 
@@ -19,6 +19,7 @@ func _ready() -> void:
 	%MusicButton.pressed.connect(_toggle.bind("music_on"))
 	%VibrationButton.pressed.connect(_toggle.bind("vibration_on"))
 	%EffectsButton.pressed.connect(_toggle.bind("reduce_effects"))
+	%ColorblindButton.pressed.connect(_toggle.bind("colorblind"))
 	%LanguageButton.pressed.connect(_next_language)
 	%ResetButton.pressed.connect(_ask_reset)
 	%BackButton.pressed.connect(GameState.go_to_menu)
@@ -36,7 +37,7 @@ func _ready() -> void:
 func _toggle(setting: String) -> void:
 	var progress = GameState.progress
 	progress.set(setting, not progress.get(setting))
-	GameState.apply_audio_settings()
+	GameState.apply_settings()
 	GameState.save()
 	if setting == "vibration_on":
 		GameState.vibrate(60)  # demonstra a vibração ao ligar
@@ -49,6 +50,7 @@ func _refresh() -> void:
 	%MusicButton.text = tr("Música: %s") % tr("ligada" if p.music_on else "desligada")
 	%VibrationButton.text = tr("Vibração: %s") % tr("ligada" if p.vibration_on else "desligada")
 	%EffectsButton.text = tr("Efeitos: %s") % tr("reduzidos" if p.reduce_effects else "completos")
+	%ColorblindButton.text = tr("Daltonismo: %s") % tr("ligado" if p.colorblind else "desligado")
 	%LanguageButton.text = tr("Idioma: %s") % I18n.NAMES[I18n.current()]
 
 

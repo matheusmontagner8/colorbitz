@@ -76,14 +76,19 @@ antes de acabarem as jogadas.
   desenho, letra grande e botão "Entendi!" explica como funciona. O jogo espera o jogador fechar,
   e cada cartão aparece uma vez só.
 - **Opções**: som, música, vibração, **efeitos reduzidos** (sem tremor de tela nem ondas
-  de choque e com menos partículas, para quem é sensível a movimento), **idioma**
+  de choque e com menos partículas, para quem é sensível a movimento), **daltonismo**
+  (troca a paleta e deixa os símbolos maiores e brancos), **idioma**
   (português ou inglês; começa no idioma do celular) e **apagar progresso** (com confirmação).
+- Na derrota, a tela mostra **quanto faltou** ("Faltou: 180 pontos" ou o bloco da cor com o
+  número) e uma barra com quanto da meta foi feito; acima de 80% aparece "Quase!".
 - Tocar em um bloco isolado não gasta jogada. Se você ficar parado, o jogo mostra uma dica.
 - Vença com jogadas sobrando para ganhar até 3 estrelas: 2 estrelas com 20% das jogadas sobrando e 3 com 40%.
   Cada vitória libera a fase seguinte (60 fases). As fases 10, 20, 30, 40, 50 e 60 são
   **portões**: só abrem com um mínimo de estrelas somadas nas fases anteriores (22, 46, 70, 94, 118 e 142, ou seja, 80% do máximo possível).
 - As cores entram aos poucos (3 → 6): azul, roxo, verde, rosa, amarelo e vermelho.
-  Cada cor tem também um ícone próprio (○ □ △ ◇ ☆ ✚), para que quem tem daltonismo jogue sem problema.
+  Cada cor tem também um ícone próprio (○ □ △ ◇ ☆ ✚). O **modo daltônico** troca a paleta
+  por uma escolhida simulando protanopia, deuteranopia e tritanopia (na paleta neon, azul e
+  roxo quase se igualam para quem tem deuteranopia) e destaca os ícones.
 
 ## Destaques técnicos
 
@@ -141,6 +146,15 @@ godot --headless --path . -s tools/balance.gd -- 300 daily     # modelos da fase
 godot --headless --path . -s tools/balance.gd -- 200 endless   # modo infinito (início e teto)
 ```
 
+### Regerar os ícones do app
+
+Gera o ícone comum, o adaptativo (frente, fundo e silhueta do Android 13+) e o ícone de
+512 px da Play Store em `assets/icon/`, todos a partir do desenho do `icon.svg`.
+
+```bash
+godot --headless --path . -s tools/make_icons.gd
+```
+
 ### Regerar os sons
 
 ```bash
@@ -171,7 +185,7 @@ scripts/ui telas (menu, fases, conquistas, opções) e componentes da tela de jo
            game_hud, power_bar, board_fx, tip_balloon, pause_menu, result_panel,
            power_tutorial
 tests/     testes da lógica e executor
-tools/     teste de fumaça, simulador de dificuldade e gerador de áudio
+tools/     teste de fumaça, simulador de dificuldade, gerador de áudio e de ícones
 ```
 
 ## Roteiro
@@ -183,7 +197,7 @@ tools/     teste de fumaça, simulador de dificuldade e gerador de áudio
       recompensa e fase diária, conquistas
 - [x] Teste em celular Android real
 - [x] **Antes da loja**: componentes da tela de jogo, inglês, efeitos reduzidos, apagar
-      progresso e política de privacidade
+      progresso, política de privacidade, modo daltônico, ícones do app e "quanto faltou" na derrota
 - [ ] **Semana 4**: anúncios e publicação na Google Play (teste fechado)
 
 ## Privacidade

@@ -240,3 +240,26 @@ func test_power_win_does_not_count_as_no_power() -> void:
 	assert_eq(st.get("stones"), 1)
 	assert_eq(st.get("wins"), 1)
 	assert_false(st.has("wins_no_power"))
+
+
+func test_shortfall_score() -> void:
+	var s := _session(["1122", "3344"], 1, {"type": "score", "target": 100})
+	s.tap(0, 0)
+	var sf := s.shortfall()
+	assert_eq(sf.parts, [{"icon": GameSession.NO_ICON, "missing": 60}])
+	assert_true(is_equal_approx(sf.fraction, 0.4), "fez 40 de 100")
+
+
+func test_shortfall_colors_lists_only_missing() -> void:
+	var s := _session(["1122", "1133", "4433"], 1, {"type": "colors", "targets": {"1": 4, "3": 6}})
+	s.tap(0, 0)  # 4 da cor 1: cumprida
+	assert_eq(s.status, GameSession.Status.LOST)
+	assert_eq(s.shortfall().parts, [{"icon": 3, "missing": 6}])
+
+
+func test_shortfall_gems_and_clear() -> void:
+	var s := _session(["G2", "12", "13"], 5, {"type": "drop", "count": 2})
+	assert_eq(s.shortfall().parts, [{"icon": Board.GEM, "missing": 2}])
+	var c := _session(["112", "334"], 5, {"type": "clear", "max_left": 2})
+	c.tap(0, 0)
+	assert_eq(c.shortfall().parts, [{"icon": GameSession.NO_ICON, "missing": 2}], "4 blocos, pode sobrar 2")

@@ -8,6 +8,7 @@ const Daily = preload("res://scripts/daily.gd")
 const Fx = preload("res://scripts/fx.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const Endless = preload("res://scripts/endless.gd")
+const BlockView = preload("res://scripts/block_view.gd")
 
 const SAVE_PATH := "user://save.json"
 const SCENE_MENU := "res://scenes/main_menu.tscn"
@@ -38,7 +39,7 @@ func _ready() -> void:
 	levels = LevelLoader.load_levels()
 	progress.load_from(SAVE_PATH)
 	I18n.apply(progress.language)
-	apply_audio_settings()
+	apply_settings()
 	add_child(preload("res://scripts/ui/neon_background.gd").new())
 	_toast_layer = CanvasLayer.new()
 	_toast_layer.layer = 50
@@ -248,9 +249,10 @@ func save() -> void:
 		push_error("Falha ao salvar progresso: %s" % error_string(err))
 
 
-## Silencia os barramentos de áudio conforme as opções.
-## (Os barramentos Music e SFX ficam em default_bus_layout.tres.)
-func apply_audio_settings() -> void:
+## Aplica as opções: silencia os barramentos de áudio (Music e SFX ficam em
+## default_bus_layout.tres) e liga/desliga a paleta do modo daltônico.
+func apply_settings() -> void:
+	BlockView.colorblind = progress.colorblind
 	_set_bus_mute("SFX", not progress.sound_on)
 	_set_bus_mute("Music", not progress.music_on)
 

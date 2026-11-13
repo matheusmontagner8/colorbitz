@@ -6,6 +6,7 @@ extends SceneTree
 
 const Progress = preload("res://scripts/progress.gd")
 const Intros = preload("res://scripts/intros.gd")
+const BlockView = preload("res://scripts/block_view.gd")
 ## Dia fixo (12/11/2026) para as capturas da fase diária saírem sempre iguais.
 const DEMO_DAY := 20769
 
@@ -107,7 +108,7 @@ func _initialize() -> void:
 	await create_timer(1.0).timeout
 	var bombs: Array = game._session.board.bombs()
 	assert(bombs == [Vector2i(3, 7)], "bomba deveria ter caído para (3, 7)")
-	assert(game._blocks[Vector2i(3, 7)].color_index == game.BlockView.BOMB, "visual da bomba")
+	assert(game._blocks[Vector2i(3, 7)].color_index == BlockView.BOMB, "visual da bomba")
 	await _save("res://docs/bomb.png")
 	_tap(game, bombs[0])  # explode a área 3x3
 	await create_timer(0.12).timeout
@@ -313,6 +314,58 @@ func _initialize() -> void:
 	assert(game._result.visible, "resultado aparece depois do bônus")
 	print("bônus de fim de fase: ok")
 	await _save("res://docs/result.png")
+
+	# Derrota: mostra quanto faltou. Meta dupla (fase 32) com uma cor cumprida
+	# e outra pela metade: só a que falta aparece.
+	_gs.current_index = 31
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	game = current_scene
+	var targets: Dictionary = game._session.color_targets()
+	var goal_colors: Array = targets.keys()
+	game._session.removed_by_color = {goal_colors[0]: targets[goal_colors[0]], goal_colors[1]: targets[goal_colors[1]] / 2}
+	game._session.moves_left = 0
+	game._session.status = game.GameSession.Status.LOST
+	game._finish()
+	await create_timer(1.3).timeout
+	var near = game._result.near_miss
+	assert(near.visible and not game._result.stars.visible, "derrota mostra quanto faltou, sem estrelas")
+	assert(near.header.text == "Faltou:", "longe da meta: sem 'quase'")
+	assert(near.row.get_child_count() == 3, "só a cor que falta: título + bloco + número")
+	await _save("res://docs/lose_colors.png")
+	# Meta de pontos, perdendo por pouco (90%): "Quase!".
+	_gs.current_index = 7
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	game = current_scene
+	game._session.score = roundi(game._session.goal_target() * 0.9)
+	game._session.moves_left = 0
+	game._session.status = game.GameSession.Status.LOST
+	game._finish()
+	await create_timer(1.3).timeout
+	near = game._result.near_miss
+	assert(near.header.text == "Quase! Faltou:", "perto da meta")
+	assert(near.bar.value > 85.0, "barra mostra 90%% da meta (%.1f)" % near.bar.value)
+	await _save("res://docs/lose_close.png")
+	print("derrota mostra quanto faltou: ok")
+
+	# Modo daltônico: paleta segura e símbolos brancos maiores (fase com 6 cores).
+	_gs.progress.colorblind = true
+	_gs.apply_settings()
+	_gs.current_index = 40
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	game = current_scene
+	assert(BlockView.colorblind and BlockView.palette() == BlockView.COLORBLIND_COLORS, "paleta daltônica ativa")
+	await _save("res://docs/colorblind.png")
+	change_scene_to_file("res://scenes/options.tscn")
+	await _frames(6)
+	assert(current_scene.get_node("%ColorblindButton").text == "Daltonismo: ligado", "opção mostra ligado")
+	await _save("res://docs/options_colorblind.png")
+	current_scene.get_node("%ColorblindButton").pressed.emit()
+	await _frames(2)
+	assert(not _gs.progress.colorblind and not BlockView.colorblind, "desliga pelas opções")
+	print("modo daltônico: ok")
 
 	# Fase diária: mesmo tabuleiro para todos no dia; vencer dá +1 de cada poder
 	# e libera a conquista "Desafio do dia" (aviso no topo).

@@ -1,5 +1,6 @@
 ## Visual de um bloco neon: quadrado arredondado com borda brilhante, halo
-## e um ícone por cor (as cores ficam distinguíveis também para daltônicos).
+## e um ícone por cor (a forma identifica a cor; o modo daltônico ainda troca a
+## paleta e destaca o ícone).
 extends Control
 
 ## Ordem das cores = ordem em que entram nas fases (fases com N cores usam as N primeiras).
@@ -11,7 +12,18 @@ const COLORS: Array[Color] = [
 	Color("#FFE53D"),  # amarelo   ★ estrela
 	Color("#FF3B3B"),  # vermelho  ✚ cruz
 ]
-const COLOR_NAMES: Array[String] = ["azuis", "roxos", "verdes", "rosa", "amarelos", "vermelhos"]
+## Paleta do modo daltônico (opção "Daltonismo"): escolhida por simulação de
+## protanopia, deuteranopia e tritanopia para que nenhum par de cores fique
+## parecido (na paleta neon, azul e roxo quase se igualam na deuteranopia).
+## Mesma ordem de entrada nas fases e mesmos símbolos da paleta normal.
+const COLORBLIND_COLORS: Array[Color] = [
+	Color("#40FFC6"),  # verde-água ● círculo
+	Color("#B340FF"),  # roxo       ■ quadrado
+	Color("#FFFF00"),  # amarelo    ▲ triângulo
+	Color("#E6395C"),  # vermelho   ◆ losango
+	Color("#BF8600"),  # laranja    ★ estrela
+	Color("#0099BF"),  # azul       ✚ cruz
+]
 const Board = preload("res://scripts/board.gd")
 ## Especiais (mesmos valores do Board) e suas cores.
 const BOMB := Board.BOMB
@@ -24,6 +36,10 @@ const STONE_COLOR := Color("#8A93B8")
 const WILD_COLOR := Color("#FFFFFF")
 const GEM_COLOR := Color("#7DF9FF")
 const ICE_COLOR := Color("#BDEBFF")
+
+## Modo daltônico ligado: paleta segura e símbolos maiores, brancos.
+## Ajustado pelo GameState a partir das opções.
+static var colorblind := false
 
 var color_index := 0:
 	set(value):
@@ -67,7 +83,13 @@ static func color_of(index: int) -> Color:
 			return WILD_COLOR
 		GEM:
 			return GEM_COLOR
-	return COLORS[index % COLORS.size()]
+	var pal := palette()
+	return pal[index % pal.size()]
+
+
+## Cores dos blocos em uso (normal ou daltônico).
+static func palette() -> Array[Color]:
+	return COLORBLIND_COLORS if colorblind else COLORS
 
 
 func _draw() -> void:
@@ -96,7 +118,11 @@ func _draw_color_block() -> void:
 	_style.shadow_color = Color(col, 0.42)
 	_style.shadow_size = int(size.x * 0.12)
 	draw_style_box(_style, Rect2(Vector2(pad, pad), size - Vector2(pad, pad) * 2.0))
-	draw_icon(self, color_index, size / 2.0, size.x * 0.17, col.lightened(0.45), maxf(2.0, size.x * 0.05))
+	if colorblind:  # símbolo maior e branco: a forma basta para reconhecer a cor
+		draw_icon(self, color_index, size / 2.0, size.x * 0.22, Color(0, 0, 0, 0.55), maxf(4.0, size.x * 0.12))
+		draw_icon(self, color_index, size / 2.0, size.x * 0.22, Color.WHITE, maxf(3.0, size.x * 0.07))
+	else:
+		draw_icon(self, color_index, size / 2.0, size.x * 0.17, col.lightened(0.45), maxf(2.0, size.x * 0.05))
 
 
 ## Desenha o ícone da cor como um "tubo de neon" (contorno).
@@ -204,9 +230,10 @@ func _draw_wild() -> void:
 	var c := size / 2.0
 	var ring := size.x * 0.33
 	var w := maxf(2.0, size.x * 0.07)
-	for i in COLORS.size():
-		var a0 := _time * 2.0 + i * TAU / COLORS.size()
-		draw_arc(c, ring, a0, a0 + TAU / COLORS.size(), 8, COLORS[i], w, true)
+	var pal := palette()
+	for i in pal.size():
+		var a0 := _time * 2.0 + i * TAU / pal.size()
+		draw_arc(c, ring, a0, a0 + TAU / pal.size(), 8, pal[i], w, true)
 	var star := PackedVector2Array()
 	for i in 10:
 		var rr := size.x * (0.17 if i % 2 == 0 else 0.07)

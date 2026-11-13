@@ -1,9 +1,10 @@
 ## Tela de resultado: título, estrelas (aparecem uma a uma, com som), pontos,
-## poderes ganhos, um aviso (portão de estrelas ou fase diária) e os botões.
+## poderes ganhos (ou, na derrota, quanto faltou para a meta), um aviso (portão de estrelas ou fase diária) e os botões.
 extends "res://scripts/ui/overlay_panel.gd"
 
 const StarsView = preload("res://scripts/ui/stars_view.gd")
 const WordTiles = preload("res://scripts/ui/word_tiles.gd")
+const NearMiss = preload("res://scripts/ui/near_miss.gd")
 
 const WIN_COLOR := Color("#2BFF88")
 const LOSE_COLOR := Color("#FF4FD8")
@@ -15,6 +16,8 @@ signal back_pressed
 
 var title: Label
 var stars: StarsView
+## Derrota: quanto faltou para a meta (no lugar das estrelas).
+var near_miss: NearMiss
 var score_label: Label
 var power_label: Label
 ## Aviso abaixo dos pontos: portão de estrelas ou recorde da fase diária.
@@ -31,6 +34,9 @@ func _init() -> void:
 	stars = StarsView.new()
 	stars.custom_minimum_size = Vector2(380, 120)
 	box.add_child(stars)
+	near_miss = NearMiss.new()
+	near_miss.visible = false
+	box.add_child(near_miss)
 	score_label = Fx.make_label(box, 38, Color(1, 1, 1, 0.75))
 	power_label = Fx.make_label(box, 30, WIN_COLOR)
 	Fx.glow_label(power_label, WIN_COLOR, 10)
@@ -61,7 +67,13 @@ func set_texts(won: bool, score_text: String, power_text: String, info: String, 
 	info_label.visible = info != ""
 	info_label.add_theme_color_override("font_color", info_color)
 	stars.visible = won
+	near_miss.visible = false
 	letters.visible = false
+
+
+## Derrota: mostra quanto faltou (GameSession.shortfall()).
+func show_shortfall(shortfall: Dictionary) -> void:
+	near_miss.show_for(shortfall)
 
 
 ## Mostra a palavra com [param revealed] letras e anima a última revelada.

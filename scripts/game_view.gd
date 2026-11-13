@@ -832,6 +832,8 @@ func _finish() -> void:
 	_result.set_texts(won, score_text, power_text, info[0], info[1])
 	_result.next_button.visible = has_next and GameState.is_unlocked(next)
 	_result.back_button.text = "Menu" if GameState.daily_mode else "Fases"
+	if not won:
+		_result.show_shortfall(_session.shortfall())
 	_result.present(stars)
 	if new_letter:
 		_result.show_letters(phrase, revealed)

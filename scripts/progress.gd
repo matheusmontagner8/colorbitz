@@ -14,6 +14,7 @@ var music_on := true
 var vibration_on := true
 ## Acessibilidade: sem tremor de tela nem ondas de choque, menos partículas.
 var reduce_effects := false
+var colorblind := false
 ## Idioma escolhido ("" = o do aparelho; veja I18n.resolve).
 var language := ""
 
@@ -263,7 +264,7 @@ func to_dict() -> Dictionary:
 		"stats": stats.duplicate(),
 		"achievements": achievements.keys(),
 		"tutorials": tutorials.keys(),
-		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on, "reduce_effects": reduce_effects, "language": language},
+		"settings": {"sound": sound_on, "music": music_on, "vibration": vibration_on, "reduce_effects": reduce_effects, "colorblind": colorblind, "language": language},
 	}
 
 
@@ -315,6 +316,7 @@ func from_dict(data: Dictionary) -> void:
 		music_on = bool(settings.get("music", true))
 		vibration_on = bool(settings.get("vibration", true))
 		reduce_effects = bool(settings.get("reduce_effects", false))
+		colorblind = bool(settings.get("colorblind", false))
 		language = str(settings.get("language", ""))
 
 

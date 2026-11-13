@@ -261,6 +261,7 @@ func test_reset_keeps_only_settings() -> void:
 	p.tutorials["powers"] = true
 	p.music_on = false
 	p.reduce_effects = true
+	p.colorblind = true
 	var q = p.reset_keeping_settings()
 	assert_eq(q.total_stars(), 0)
 	assert_eq(q.power_count("hammer"), Progress.POWER_START)
@@ -269,6 +270,7 @@ func test_reset_keeps_only_settings() -> void:
 	assert_true(q.achievements.is_empty() and q.tutorials.is_empty())
 	assert_false(q.music_on, "opções mantidas")
 	assert_true(q.reduce_effects, "opções mantidas")
+	assert_true(q.colorblind, "modo daltônico mantido")
 
 
 func test_endless_best() -> void:
