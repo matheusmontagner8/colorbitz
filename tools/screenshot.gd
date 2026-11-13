@@ -38,6 +38,34 @@ func _initialize() -> void:
 	await _shot("res://scenes/level_select.tscn", "res://docs/levels.png")
 	await _shot("res://scenes/options.tscn", "res://docs/options.png")
 
+	# Rolagem da tela de fases: arrastar começando em cima de um botão rola
+	# (sem abrir a fase); um toque simples abre a fase.
+	change_scene_to_file("res://scenes/level_select.tscn")
+	await _frames(6)
+	var select = current_scene
+	var scroll: ScrollContainer = select.get_node("%Scroll")
+	scroll.scroll_vertical = 0
+	await _frames(2)
+	var first_button: Button = select.get_node("%Grid").get_child(0)
+	var start: Vector2 = first_button.get_global_rect().get_center()
+	_mouse_button(start, true)
+	for i in 12:
+		await _frames(1)
+		_mouse_move(start + Vector2(0, -40 * (i + 1)), Vector2(0, -40))
+	_mouse_button(start + Vector2(0, -480), false)
+	await create_timer(0.6).timeout
+	assert(current_scene == select, "arrastar não abre a fase")
+	assert(scroll.scroll_vertical >= 400, "arrastar em cima dos botões rola a grade (%d)" % scroll.scroll_vertical)
+	scroll.scroll_vertical = 0
+	await _frames(3)
+	var tap_at: Vector2 = first_button.get_global_rect().get_center()
+	_mouse_button(tap_at, true)
+	await _frames(1)
+	_mouse_button(tap_at, false)
+	await _frames(4)
+	assert(current_scene != select and _gs.current_index == 0, "toque simples abre a fase 1")
+	print("rolagem da tela de fases: ok")
+
 	_gs.current_index = 7  # fase 8: meta alta o bastante para não vencer com poucos toques
 	change_scene_to_file("res://scenes/game.tscn")
 	await _frames(5)
@@ -467,6 +495,26 @@ func _tap_groups(game, n: int) -> int:
 				if n > 1:
 					await create_timer(0.6).timeout
 	return taps
+
+
+## Eventos de mouse/toque "de verdade" (passam pelo _input e pela interface).
+func _mouse_button(pos: Vector2, pressed: bool) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = pressed
+	ev.position = pos
+	ev.global_position = pos
+	ev.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+	root.push_input(ev, true)
+
+
+func _mouse_move(pos: Vector2, relative: Vector2) -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.position = pos
+	ev.global_position = pos
+	ev.relative = relative
+	ev.button_mask = MOUSE_BUTTON_MASK_LEFT
+	root.push_input(ev, true)
 
 
 func _frames(n: int) -> void:

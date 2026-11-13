@@ -3,6 +3,7 @@ extends Control
 
 const Achievements = preload("res://scripts/achievements.gd")
 const Daily = preload("res://scripts/daily.gd")
+const DragScroll = preload("res://scripts/ui/drag_scroll.gd")
 
 const GOLD := Color("#FFE53D")
 const DONE_COLOR := Color("#2BFF88")
@@ -13,6 +14,7 @@ const BAR_COLOR := Color("#3DE0FF")
 func _ready() -> void:
 	Audio.play_music("menu")
 	%BackButton.pressed.connect(GameState.go_to_menu)
+	add_child(DragScroll.new(%Scroll))  # arrastar em cima das linhas também rola
 	var progress = GameState.progress
 	var done := 0
 	for a in Achievements.LIST:
