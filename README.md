@@ -20,6 +20,7 @@ antes de acabarem as jogadas.
   <img src="docs/achievements.png" width="200" alt="Conquistas">
   <img src="docs/tutorial_swap_pair.png" width="200" alt="Tutorial da Troca">
   <img src="docs/en_game.png" width="200" alt="Jogo em inglês">
+  <img src="docs/letters_result.png" width="200" alt="Nova letra de MODO INFINITO">
   <img src="docs/endless_levels.png" width="200" alt="Modo infinito na tela de fases">
 </p>
 
@@ -60,7 +61,9 @@ antes de acabarem as jogadas.
   Brasília). Cada dia da semana tem um tema (pedras, coringas, gelo, joias, ampulheta, meta dupla,
   limpeza). Pode repetir à vontade; a primeira vitória do dia dá +1 Martelo e +1 Troca e o jogo
   guarda o recorde do dia.
-- **Modo infinito**: vencer a fase 60 libera fases sem fim a partir da 61, geradas por
+- **Modo infinito**: cada fase múltipla de 5 (5, 10, ..., 60) revela uma letra de
+  "MODO INFINITO" (12 letras; "INFINITE MODE" em inglês), mostrada na tela de fases e no
+  resultado. Com a palavra completa (fase 60), as fases continuam sem fim a partir da 61, geradas por
   [`scripts/endless.gd`](scripts/endless.gd). Os tipos de meta se revezam (pontos, cor, joias,
   duas cores, formato, limpar) com especiais sorteados; a dificuldade sobe até a fase 121 e
   para num teto justo (~30–70% de vitória no simulador). As estrelas contam para os poderes.

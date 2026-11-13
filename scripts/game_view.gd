@@ -15,6 +15,7 @@ const BoardFx = preload("res://scripts/ui/board_fx.gd")
 const TipBalloon = preload("res://scripts/ui/tip_balloon.gd")
 const PauseMenu = preload("res://scripts/ui/pause_menu.gd")
 const ResultPanel = preload("res://scripts/ui/result_panel.gd")
+const Endless = preload("res://scripts/endless.gd")
 
 const NEON_CYAN := Color("#3DE0FF")
 const MOVES_COLOR := Color("#FFE53D")
@@ -758,6 +759,10 @@ func _finish() -> void:
 	_power_bar.hide_shuffle()
 	_pause_button.disabled = true
 	var power_text := ""
+	# Primeira vitória numa fase múltipla de 5 da campanha: revela uma letra.
+	var level_number := GameState.current_index + 1
+	var new_letter: bool = won and not GameState.daily_mode and Endless.gives_letter(level_number) \
+		and GameState.progress.stars_for(level_number) == 0
 	if won:
 		var gained := GameState.complete_current_level(stars, _session.score)  # salva antes da animação do bônus
 		if gained > 0:
@@ -778,10 +783,16 @@ func _finish() -> void:
 	var next := GameState.current_index + 1
 	var has_next: bool = won and GameState.has_next_level()
 	var info: Array = _daily_info() if GameState.daily_mode else _gate_info(next, has_next)
+	var phrase := tr("MODO INFINITO")
+	var revealed: int = GameState.letters_revealed()
+	if new_letter and info[0] == "":
+		info = [tr("Nova letra: %s!") % phrase.replace(" ", "")[revealed - 1], Color("#2BFF88")]
 	_result.set_texts(won, score_text, power_text, info[0], info[1])
 	_result.next_button.visible = has_next and GameState.is_unlocked(next)
 	_result.back_button.text = "Menu" if GameState.daily_mode else "Fases"
 	_result.present(stars)
+	if new_letter:
+		_result.show_letters(phrase, revealed)
 
 
 ## Fase diária: recorde do dia e se o prêmio já foi ganho. [texto, cor]

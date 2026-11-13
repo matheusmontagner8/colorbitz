@@ -313,6 +313,23 @@ func _initialize() -> void:
 	await _save("res://docs/achievements.png")
 	print("conquistas: ok")
 
+	# Letras de "MODO INFINITO": a fase 10 (vencida pela 1ª vez) revela o "O".
+	_gs.daily_mode = false  # o cenário da fase diária deixou o modo ligado
+	_gs.current_index = 9
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	game = current_scene
+	game._session.status = game.GameSession.Status.WON
+	game._finish()
+	await create_timer(4.5).timeout
+	assert(game._result.info_label.text == "Nova letra: O!", "aviso da letra nova")
+	assert(game._result.letters.visible and _gs.letters_revealed() == 2, "palavra com 2 letras (M, O)")
+	await _save("res://docs/letters_result.png")
+	change_scene_to_file("res://scenes/level_select.tscn")
+	await _frames(6)
+	await _save("res://docs/letters_levels.png")
+	print("letras do modo infinito: ok")
+
 	# Modo infinito: vencer a fase 60 libera fases sem fim a partir da 61.
 	for i in 59:
 		progress.record_result(i + 1, 2)
@@ -326,12 +343,13 @@ func _initialize() -> void:
 	await create_timer(4.5).timeout
 	assert(game._result.info_label.text.begins_with("Modo infinito liberado"), "aviso do modo infinito")
 	assert(game._result.next_button.visible, "próxima fase (61) disponível")
+	assert(game._result.letters.visible and _gs.letters_revealed() == 12, "palavra completa")
 	await _save("res://docs/endless_unlocked.png")
 	change_scene_to_file("res://scenes/level_select.tscn")
 	await _frames(6)
 	var endless_button: Button = null
-	for child in current_scene.get_node("%Scroll").get_parent().get_children():
-		if child is Button and child.text.begins_with("Modo infinito"):
+	for child in current_scene.find_children("*", "Button", true, false):
+		if child.text.begins_with("Modo infinito"):
 			endless_button = child
 	assert(endless_button != null and endless_button.text == "Modo infinito: fase 61" and not endless_button.disabled, "botão do modo infinito")
 	await _save("res://docs/endless_levels.png")

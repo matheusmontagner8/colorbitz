@@ -3,6 +3,7 @@
 extends Control
 
 const StarsView = preload("res://scripts/ui/stars_view.gd")
+const WordTiles = preload("res://scripts/ui/word_tiles.gd")
 
 const BUTTON_SIZE := Vector2(132, 144)
 const LOCK_COLOR := Color(0.3, 0.36, 0.55, 1)
@@ -56,21 +57,31 @@ func _ready() -> void:
 		%Scroll.ensure_control_visible(last_unlocked)
 
 
-## Botão fixo embaixo da grade: continua o modo infinito (trancado até
-## vencer a última fase da campanha).
+## Fixo embaixo da grade: a palavra "MODO INFINITO" (uma letra a cada 5
+## fases) e, com ela completa, o botão que continua o modo infinito.
 func _add_endless_button() -> void:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 112)
-	button.add_theme_font_size_override("font_size", 34)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	var word := WordTiles.new(50.0)
+	word.setup(tr("MODO INFINITO"), GameState.letters_revealed())
+	box.add_child(word)
 	if GameState.endless_unlocked():
 		var next: int = GameState.endless_next_index()
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 104)
+		button.add_theme_font_size_override("font_size", 34)
 		button.text = tr("Modo infinito: fase %d") % (next + 1)
 		button.theme_type_variation = &"AccentButton"
 		button.pressed.connect(GameState.play_level.bind(next))
+		box.add_child(button)
 	else:
-		button.text = tr("Modo infinito: vença a fase %d") % GameState.levels.size()
-		button.disabled = true
-	%Scroll.add_sibling(button)
+		var hint := Label.new()
+		hint.text = "Cada fase múltipla de 5 revela uma letra"
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hint.add_theme_font_size_override("font_size", 24)
+		hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+		box.add_child(hint)
+	%Scroll.add_sibling(box)
 
 
 func _add_lock_icon(button: Button, offset_y: float, scale_factor: float) -> void:

@@ -126,3 +126,25 @@ func test_endless_levels() -> void:
 	assert_eq(kinds.size(), 5, "usa os tipos de meta (score, color, colors, clear, drop)")
 	assert_eq(Endless.difficulty(61), 0.0)
 	assert_eq(Endless.difficulty(5000), 1.0, "a dificuldade tem teto")
+
+
+## "MODO INFINITO": uma letra a cada fase múltipla de 5 até a 60.
+func test_endless_letters() -> void:
+	var Endless = preload("res://scripts/endless.gd")
+	var Progress = preload("res://scripts/progress.gd")
+	var givers := []
+	for n in range(1, 80):
+		if Endless.gives_letter(n):
+			givers.append(n)
+	assert_eq(givers, [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60])
+	assert_eq("MODO INFINITO".replace(" ", "").length(), Endless.LETTER_COUNT)
+	var p = Progress.new()
+	assert_eq(Endless.letters_revealed(p), 0)
+	for n in range(1, 13):
+		p.record_result(n, 1)
+	assert_eq(Endless.letters_revealed(p), 2, "fases 5 e 10")
+	for n in range(13, 61):
+		p.record_result(n, 1)
+	assert_eq(Endless.letters_revealed(p), 12, "palavra completa com a fase 60")
+	p.record_result(65, 3)
+	assert_eq(Endless.letters_revealed(p), 12, "o modo infinito não dá letras")

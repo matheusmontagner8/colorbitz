@@ -3,6 +3,7 @@
 extends "res://scripts/ui/overlay_panel.gd"
 
 const StarsView = preload("res://scripts/ui/stars_view.gd")
+const WordTiles = preload("res://scripts/ui/word_tiles.gd")
 
 const WIN_COLOR := Color("#2BFF88")
 const LOSE_COLOR := Color("#FF4FD8")
@@ -18,6 +19,8 @@ var score_label: Label
 var power_label: Label
 ## Aviso abaixo dos pontos: portão de estrelas ou recorde da fase diária.
 var info_label: Label
+## Letras de "MODO INFINITO" (só ao revelar uma letra nova).
+var letters: WordTiles
 var next_button: Button
 var back_button: Button
 
@@ -34,6 +37,9 @@ func _init() -> void:
 	info_label = Fx.make_label(box, 30, INFO_COLOR)
 	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info_label.custom_minimum_size.x = 520
+	letters = WordTiles.new(56.0)
+	letters.visible = false
+	box.add_child(letters)
 	add_spacer(16)
 	next_button = add_button("Próxima fase", func(): next_pressed.emit())
 	next_button.theme_type_variation = &"AccentButton"
@@ -55,6 +61,14 @@ func set_texts(won: bool, score_text: String, power_text: String, info: String, 
 	info_label.visible = info != ""
 	info_label.add_theme_color_override("font_color", info_color)
 	stars.visible = won
+	letters.visible = false
+
+
+## Mostra a palavra com [param revealed] letras e anima a última revelada.
+func show_letters(phrase: String, revealed: int) -> void:
+	letters.setup(phrase, revealed)
+	letters.visible = true
+	letters.pop(revealed - 1)
 
 
 ## Mostra a tela com fade e as estrelas aparecendo uma a uma.

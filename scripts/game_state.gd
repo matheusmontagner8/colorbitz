@@ -71,6 +71,11 @@ func has_next_level() -> bool:
 	return not daily_mode
 
 
+## Letras de "MODO INFINITO" já reveladas (uma a cada 5 fases).
+func letters_revealed() -> int:
+	return Endless.letters_revealed(progress)
+
+
 ## O modo infinito abre ao vencer a última fase da campanha.
 func endless_unlocked() -> bool:
 	return progress.stars_for(levels.size()) > 0

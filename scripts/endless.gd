@@ -14,6 +14,24 @@ const FIRST_LEVEL := 61
 const RAMP_LEVELS := 60
 ## Os tipos se revezam nesta ordem (nunca o mesmo duas vezes seguidas).
 const KINDS := ["score", "color", "drop", "colors", "shape", "clear"]
+## Na campanha, cada fase múltipla de LETTER_EVERY revela uma letra de
+## "MODO INFINITO" (12 letras: fases 5, 10, ..., 60).
+const LETTER_EVERY := 5
+const LETTER_COUNT := 12
+
+
+## A fase revela uma letra da palavra ao ser vencida pela primeira vez?
+static func gives_letter(level_number: int) -> bool:
+	return level_number % LETTER_EVERY == 0 and level_number / LETTER_EVERY in range(1, LETTER_COUNT + 1)
+
+
+## Quantas letras o jogador já revelou (fases múltiplas de 5 vencidas).
+static func letters_revealed(progress) -> int:
+	var n := 0
+	for k in range(1, LETTER_COUNT + 1):
+		if progress.stars_for(k * LETTER_EVERY) > 0:
+			n += 1
+	return n
 
 
 ## Dificuldade de 0 (fase 61) a 1 (teto).

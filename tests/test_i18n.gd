@@ -32,6 +32,20 @@ func test_english_file_is_valid() -> void:
 		assert_eq(String(en[key]).count("\n"), String(key).count("\n"), "quebras de linha diferentes em: %s" % key)
 
 
+## Cada entrada numa linha só: quebras de linha só como \n escapado (o
+## leitor do Godot aceita quebra real dentro do texto, mas o arquivo deixa de
+## ser JSON válido para outras ferramentas).
+func test_english_file_one_entry_per_line() -> void:
+	var re := RegEx.new()
+	re.compile("^\t\"(?:[^\"\\\\]|\\\\.)*\": \"(?:[^\"\\\\]|\\\\.)*\",?$")
+	var lines := FileAccess.get_file_as_string(I18n.LANG_DIR + "en.json").split("\n")
+	for i in lines.size():
+		var line: String = lines[i]
+		if line.strip_edges() in ["", "{", "}"]:
+			continue
+		assert_true(re.search(line) != null, "en.json linha %d fora do formato: %s" % [i + 1, line])
+
+
 ## Todo tr("...") e I18n.t("...") do código precisa estar traduzido.
 func test_every_tr_call_is_translated() -> void:
 	var en := _en()

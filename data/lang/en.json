@@ -34,13 +34,13 @@
 	"O jogo começa do zero.": "The game starts from scratch.",
 
 	"Estrelas: %d de %d": "Stars: %d of %d",
-	"Modo infinito: fase %d": "Endless mode: level %d",
-	"Modo infinito: vença a fase %d": "Endless mode: beat level %d",
-	"Modo infinito liberado! As fases
-agora continuam sem fim.": "Endless mode unlocked! Levels
-now go on forever.",
+	"Modo infinito: fase %d": "Infinite mode: level %d",
+	"Modo infinito liberado! As fases\nagora continuam sem fim.": "Infinite mode unlocked! Levels\nnow go on forever.",
 	"Sem fim": "Endless",
-	"Vença a fase 100 do modo infinito": "Beat level 100 in endless mode",
+	"MODO INFINITO": "INFINITE MODE",
+	"Nova letra: %s!": "New letter: %s!",
+	"Cada fase múltipla de 5 revela uma letra": "Every 5th level reveals a letter",
+	"Vença a fase 100 do modo infinito": "Beat level 100 in infinite mode",
 	"Martelo: %d   Troca: %d\nMais 1 de cada em %d %s": "Hammer: %d   Swap: %d\n+1 of each in %d %s",
 	"estrela": "star",
 	"estrelas": "stars",
