@@ -2,7 +2,7 @@
 ## com dois jogadores automáticos e mostra a taxa de vitória.
 ##   - guloso: toca sempre o maior grupo (da cor-alvo, se a meta for de cor)
 ##   - aleatório: toca qualquer grupo válido
-## Uso: godot --headless --path . -s tools/balance.gd [-- N_PARTIDAS [arquivo.json | daily | endless]]
+## Uso: godot --headless --path . -s tools/balance.gd [-- N_PARTIDAS [arquivo.json | daily | endless | bosses]]
 ## Com "daily", simula os modelos da fase diária (scripts/daily.gd) em tabuleiros aleatórios.
 extends SceneTree
 
@@ -19,7 +19,11 @@ func _initialize() -> void:
 	if args.size() > 0:
 		runs = int(args[0])
 	var levels: Array = []
-	if args.size() > 1 and args[1] == "endless":
+	if args.size() > 1 and args[1] == "bosses":
+		# Fases chefe do modo infinito (70 a 200).
+		for n in range(70, 210, Endless.BOSS_EVERY):
+			levels.append(Endless.level_for(n))
+	elif args.size() > 1 and args[1] == "endless":
 		# Começo (61-72) e teto da dificuldade (121-132) do modo infinito.
 		for n in range(61, 73) + range(121, 133):
 			levels.append(Endless.level_for(n))

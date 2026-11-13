@@ -23,6 +23,7 @@ antes de acabarem as jogadas.
   <img src="docs/letters_result.png" width="200" alt="Nova letra de MODO INFINITO">
   <img src="docs/intro_bomb.png" width="200" alt="Cartão explicando a bomba">
   <img src="docs/endless_levels.png" width="200" alt="Modo infinito na tela de fases">
+  <img src="docs/boss_result.png" width="200" alt="Chefe derrotado, patente e baú">
 </p>
 
 > Projeto em desenvolvimento: este é o MVP do meu primeiro jogo para Android.
@@ -68,6 +69,14 @@ antes de acabarem as jogadas.
   [`scripts/endless.gd`](scripts/endless.gd). Os tipos de meta se revezam (pontos, cor, joias,
   duas cores, formato, limpar) com especiais sorteados; a dificuldade sobe até a fase 121 e
   para num teto justo (~30–70% de vitória no simulador). As estrelas contam para os poderes.
+  Metas para seguir jogando:
+  - **Fases chefe** a cada 10 (70, 80, 90...), com borda dourada: três cores ao mesmo tempo,
+    "fortaleza" (pontos com pedras e gelo) ou "tesouro" (3 joias). Mais difíceis (~50% de
+    vitória no começo e 24–41% no teto, sem poderes) e a primeira vitória dá +2 de cada poder.
+  - **Patentes** ao vencer os chefes 70, 80, 100, 130, 160 e 200: Bronze, Prata, Ouro,
+    Platina, Diamante e Neon, cada uma com prêmio; a atual aparece no menu.
+  - **Baú de estrelas**: as estrelas do modo infinito enchem o baú, que abre a cada 30 com um
+    prêmio sorteado (às vezes em dobro). A tela de fases mostra a patente, o próximo chefe e o baú.
 - **Conquistas** (16): por exemplo "criar 25 bombas", "vencer 10 fases sem usar poderes",
   "vencer 7 fases diárias". Cada uma dá poderes e aparece num aviso na hora em que é liberada.
 - **Cartões de apresentação** ([`scripts/intros.gd`](scripts/intros.gd)): na primeira vez que
@@ -144,6 +153,7 @@ godot --path . -s tools/screenshot.gd
 godot --headless --path . -s tools/balance.gd -- 300
 godot --headless --path . -s tools/balance.gd -- 300 daily     # modelos da fase diária
 godot --headless --path . -s tools/balance.gd -- 200 endless   # modo infinito (início e teto)
+godot --headless --path . -s tools/balance.gd -- 200 bosses    # fases chefe (70 a 200)
 ```
 
 ### Regerar os ícones do app

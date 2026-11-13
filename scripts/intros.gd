@@ -9,7 +9,8 @@ const Board = preload("res://scripts/board.gd")
 
 ## id -> {title, text, icon}. "icon": lista de células para desenhar
 ## (cores 0..5 ou Board.BOMB/WILD/STONE/GEM; "ice"/"ice2" = bloco congelado;
-## "goal" = cores da meta da fase; "hole" = buraco). Textos em português
+## "goal" = cores da meta da fase; "hole" = buraco; "chest"/"crown"/"medal" =
+## ícones do modo infinito, ui/badge_icon.gd). Textos em português
 ## (traduzidos por data/lang/en.json); "%d" no texto da bomba = tamanho do grupo.
 const CARDS := {
 	"goal_score": {"title": "Meta de pontos", "icon": [0, 1, 2],
@@ -38,10 +39,14 @@ const CARDS := {
 		"text": "Um desafio novo todo dia, igual para\ntodos os jogadores. Você pode tentar\nquantas vezes quiser: a primeira vitória\ndo dia vale +1 Martelo e +1 Troca."},
 	"endless": {"title": "Modo infinito", "icon": [5, 2, 1],
 		"text": "Parabéns! Agora as fases continuam\npara sempre, cada uma com um desafio.\nAs estrelas continuam valendo poderes."},
+	"endless_goals": {"title": "Metas do infinito", "icon": ["chest", "crown", "medal"],
+		"text": "Cada estrela enche o baú: com 30\nestrelas ele abre e dá poderes.\nA cada 10 fases vem uma fase chefe.\nVencer chefes dá patentes: Bronze,\nPrata, Ouro e outras ainda maiores."},
+	"boss": {"title": "Fase chefe!", "icon": ["crown"],
+		"text": "Esta fase é mais difícil que as outras.\nA primeira vitória vale +2 Martelos\ne +2 Trocas, e alguns chefes dão\numa patente nova. Use seus poderes!"},
 }
 
 ## Ordem em que aparecem quando uma fase traz várias novidades de uma vez.
-const ORDER := ["daily", "endless", "goal_score", "goal_color", "goal_colors", "goal_clear",
+const ORDER := ["daily", "endless", "endless_goals", "boss", "goal_score", "goal_color", "goal_colors", "goal_clear",
 	"goal_drop", "holes", "stone", "wild", "ice", "ice2"]
 
 
@@ -57,6 +62,9 @@ static func concepts_for(level: Dictionary, board, daily := false) -> Array:
 		found["daily"] = true
 	if bool(level.get("endless", false)):
 		found["endless"] = true
+		found["endless_goals"] = true
+	if bool(level.get("boss", false)):
+		found["boss"] = true
 	var goal_type := String(level.get("goal", {}).get("type", "score"))
 	found["goal_" + goal_type] = true
 	for y in board.height:

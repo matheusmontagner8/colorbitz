@@ -479,6 +479,40 @@ func _initialize() -> void:
 	assert(game._result.next_button.visible and _gs.endless_next_index() == 61, "depois da 61 vem a 62")
 	print("modo infinito: ok")
 
+	# Chefe (fase 70): borda dourada; vencer dá prêmio, patente Bronze e enche o baú.
+	for n in range(62, 70):
+		progress.record_result(n, 3)
+	_gs.current_index = 69
+	change_scene_to_file("res://scenes/game.tscn")
+	await _frames(6)
+	game = current_scene
+	assert(game._hud.level_label.text == "Chefe · Fase 70", "título do chefe (%s)" % game._hud.level_label.text)
+	assert(game._board_style.border_color.is_equal_approx(Color(game.BOSS_COLOR, 0.9)), "borda dourada")
+	await _save("res://docs/boss.png")
+	game._intro.open("endless_goals")
+	await create_timer(0.5).timeout
+	await _save("res://docs/intro_endless_goals.png")
+	game._intro.visible = false
+	game._session.status = game.GameSession.Status.WON
+	game._session.moves_left = game._session.max_moves
+	game._finish()
+	await create_timer(5.0).timeout
+	assert(game._result.power_label.text.contains("Chefe derrotado!"), "prêmio do chefe")
+	assert(game._result.power_label.text.contains("Nova patente: Bronze!"), "patente nova")
+	assert(game._result.rank_row.visible and game._result.chest.visible, "medalha e baú no resultado")
+	assert(_gs.rank_index() == 0, "patente Bronze")
+	await _save("res://docs/boss_result.png")
+	change_scene_to_file("res://scenes/level_select.tscn")
+	await _frames(6)
+	var texts := current_scene.find_children("*", "Label", true, false).map(func(l): return l.text)
+	assert("Patente Bronze" in texts and "Chefe: fase 80" in texts, "patente e próximo chefe na tela de fases")
+	await _save("res://docs/endless_status.png")
+	change_scene_to_file("res://scenes/main_menu.tscn")
+	await _frames(6)
+	assert(current_scene.find_child("RankBadge", true, false) != null, "selo da patente no menu")
+	await _save("res://docs/menu_rank.png")
+	print("chefe, patente e baú: ok")
+
 	# Opções: trocar o idioma pela tela muda os textos na hora.
 	change_scene_to_file("res://scenes/options.tscn")
 	await _frames(6)

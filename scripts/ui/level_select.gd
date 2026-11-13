@@ -5,6 +5,9 @@ extends Control
 const StarsView = preload("res://scripts/ui/stars_view.gd")
 const WordTiles = preload("res://scripts/ui/word_tiles.gd")
 const DragScroll = preload("res://scripts/ui/drag_scroll.gd")
+const BadgeIcon = preload("res://scripts/ui/badge_icon.gd")
+const ChestBar = preload("res://scripts/ui/chest_bar.gd")
+const Endless = preload("res://scripts/endless.gd")
 
 const BUTTON_SIZE := Vector2(132, 144)
 const LOCK_COLOR := Color(0.3, 0.36, 0.55, 1)
@@ -83,7 +86,8 @@ func _lighten(button: Button) -> void:
 
 
 ## Fixo embaixo da grade: a palavra "MODO INFINITO" (uma letra a cada 5
-## fases) e, com ela completa, o botão que continua o modo infinito.
+## fases) e, com ela completa, o botão que continua o modo infinito, a
+## patente, o próximo chefe e o baú de estrelas.
 func _add_endless_button() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
@@ -99,6 +103,10 @@ func _add_endless_button() -> void:
 		button.theme_type_variation = &"AccentButton"
 		button.pressed.connect(GameState.play_level.bind(next))
 		box.add_child(button)
+		box.add_child(_endless_status(next + 1))
+		var chest := ChestBar.new(260.0)
+		chest.set_stars(GameState.chest_stars())
+		box.add_child(chest)
 	else:
 		var hint := Label.new()
 		hint.text = "Cada fase múltipla de 5 revela uma letra"
@@ -107,6 +115,32 @@ func _add_endless_button() -> void:
 		hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
 		box.add_child(hint)
 	%Scroll.add_sibling(box)
+
+
+## Linha "medalha + patente | coroa + próximo chefe" do modo infinito.
+func _endless_status(next_level: int) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	var rank: int = GameState.rank_index()
+	var rank_color := Color(Endless.RANKS[rank].color) if rank >= 0 else Color(1, 1, 1, 0.45)
+	row.add_child(BadgeIcon.new("medal", rank_color, 48.0))
+	var rank_label := _small_label(row, rank_color)
+	rank_label.text = tr("Patente %s") % tr(Endless.RANKS[rank].name) if rank >= 0 else tr("Sem patente")
+	var gap := Control.new()
+	gap.custom_minimum_size.x = 24
+	row.add_child(gap)
+	row.add_child(BadgeIcon.new("crown", BadgeIcon.GOLD, 48.0))
+	_small_label(row, BadgeIcon.GOLD).text = tr("Chefe: fase %d") % Endless.next_boss(next_level)
+	return row
+
+
+func _small_label(parent: Node, col: Color) -> Label:
+	var l := Label.new()
+	l.add_theme_font_size_override("font_size", 26)
+	l.add_theme_color_override("font_color", col)
+	parent.add_child(l)
+	return l
 
 
 func _add_lock_icon(button: Button, offset_y: float, scale_factor: float) -> void:

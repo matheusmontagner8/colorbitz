@@ -6,6 +6,8 @@ const BlockView = preload("res://scripts/block_view.gd")
 const Fx = preload("res://scripts/fx.gd")
 const Daily = preload("res://scripts/daily.gd")
 const PowerButton = preload("res://scripts/ui/power_button.gd")
+const BadgeIcon = preload("res://scripts/ui/badge_icon.gd")
+const Endless = preload("res://scripts/endless.gd")
 
 const TITLE := "Colorbitz"
 const NEON_CYAN := Color("#3DE0FF")
@@ -25,10 +27,28 @@ func _ready() -> void:
 	%QuitButton.pressed.connect(get_tree().quit)
 	_build_title()
 	_build_logo()
+	_build_rank_badge()
 	_update_daily_button()
 	GameState.check_achievements()  # libera as que o jogador já cumpriu antes
 	if GameState.progress.can_claim_daily(GameState.today()):
 		_build_reward_overlay()
+
+
+## Selo da patente do modo infinito embaixo do título (se já tiver uma).
+func _build_rank_badge() -> void:
+	var rank: int = GameState.rank_index()
+	if rank < 0:
+		return
+	var col := Color(Endless.RANKS[rank].color)
+	var row := HBoxContainer.new()
+	row.name = "RankBadge"
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	row.add_child(BadgeIcon.new("medal", col, 60.0))
+	var label := _label(row, 34, col.lightened(0.15))
+	label.text = tr("Patente %s") % tr(Endless.RANKS[rank].name)
+	Fx.glow_label(label, col, 10)
+	%TitleBox.add_sibling(row)
 
 
 func _update_daily_button() -> void:

@@ -29,6 +29,8 @@ var daily_mode := false
 var _daily_level: Dictionary = {}
 ## Ferramentas e testes podem fixar o dia (Daily.day_number); -1 = hoje de verdade.
 var day_override := -1
+## Prêmios do modo infinito da última vitória (Progress.claim_endless_rewards).
+var last_rewards: Array = []
 var _toast_layer: CanvasLayer
 var _toast_queue: Array = []
 var _toast_running := false
@@ -75,6 +77,16 @@ func letters_revealed() -> int:
 	return Endless.letters_revealed(progress)
 
 
+## Patente atual no modo infinito (índice em Endless.RANKS; -1 = nenhuma).
+func rank_index() -> int:
+	return Endless.rank_index(progress.endless_best(levels.size()))
+
+
+## Estrelas no baú do modo infinito (0 até Endless.CHEST_STARS - 1).
+func chest_stars() -> int:
+	return progress.chest_stars(levels.size())
+
+
 ## O modo infinito abre ao vencer a última fase da campanha.
 func endless_unlocked() -> bool:
 	return progress.stars_for(levels.size()) > 0
@@ -117,15 +129,21 @@ func reset_progress() -> void:
 
 ## Registra uma vitória na fase atual (ou na diária) e salva.
 ## Retorna quantos poderes de cada tipo o jogador ganhou (estrelas novas ou
-## primeira vitória do dia na fase diária).
+## primeira vitória do dia na fase diária). No modo infinito, os prêmios de
+## chefe, patente e baú ficam em [member last_rewards].
 func complete_current_level(stars: int, score: int = 0) -> int:
 	var gained := 0
+	last_rewards = []
 	if daily_mode:
 		gained = progress.record_daily_win(today(), score)
 	else:
 		var before: int = progress.powers_granted()
-		progress.record_result(current_level().get("id", current_index + 1), stars)
+		var id := int(current_level().get("id", current_index + 1))
+		var first_win: bool = progress.stars_for(id) == 0
+		progress.record_result(id, stars)
 		gained = progress.powers_granted() - before
+		if is_endless():
+			last_rewards = progress.claim_endless_rewards(id, first_win, levels.size())
 	check_achievements()
 	save()
 	return gained

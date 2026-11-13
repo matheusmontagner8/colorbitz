@@ -87,6 +87,12 @@ func reset(session) -> void:
 	build_goal_row(session)
 
 
+## Cor do título (dourado na fase chefe).
+func set_title_color(col: Color) -> void:
+	level_label.add_theme_color_override("font_color", col)
+	Fx.glow_label(level_label, col, 14)
+
+
 ## Atualiza tudo a partir da sessão.
 func refresh(session, title: String) -> void:
 	level_label.text = title

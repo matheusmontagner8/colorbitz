@@ -28,7 +28,9 @@ func test_concepts_from_goal_and_board() -> void:
 	assert_eq(Intros.concepts_for(level, b), ["goal_color", "stone", "wild", "ice2"])
 	assert_eq(Intros.concepts_for({}, _board(["11"])), ["goal_score"], "sem meta = pontos")
 	assert_eq(Intros.concepts_for({"goal": {"type": "drop"}, "endless": true}, _board(["1x"]), true),
-		["daily", "endless", "goal_drop", "holes"])
+		["daily", "endless", "endless_goals", "goal_drop", "holes"])
+	assert_eq(Intros.concepts_for({"goal": {"type": "score"}, "endless": true, "boss": true}, _board(["11"])),
+		["endless", "endless_goals", "boss", "goal_score"], "fase chefe")
 
 
 func test_each_card_only_once() -> void:

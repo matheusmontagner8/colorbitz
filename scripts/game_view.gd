@@ -18,9 +18,12 @@ const ResultPanel = preload("res://scripts/ui/result_panel.gd")
 const Endless = preload("res://scripts/endless.gd")
 const Intros = preload("res://scripts/intros.gd")
 const IntroCard = preload("res://scripts/ui/intro_card.gd")
+const Daily = preload("res://scripts/daily.gd")
 
 const NEON_CYAN := Color("#3DE0FF")
 const MOVES_COLOR := Color("#FFE53D")
+## Fase chefe do modo infinito: borda dourada no tabuleiro e no título.
+const BOSS_COLOR := Color("#FFD54A")
 const DANGER_COLOR := Color("#FF3B3B")
 const HUD_HEIGHT := 252.0
 const POWER_BAR_HEIGHT := 150.0
@@ -61,6 +64,7 @@ var _pause_button: Button
 var _stage: Control  # tabuleiro + efeitos (é ele que treme)
 var _board_root: Control
 var _board_bg: Panel
+var _board_style: StyleBoxFlat
 var _holes_layer: Control
 var _hint_timer: Timer
 
@@ -111,6 +115,7 @@ func _build_ui() -> void:
 	sb.shadow_size = 24
 	sb.set_corner_radius_all(22)
 	sb.anti_aliasing = true
+	_board_style = sb
 	_board_bg.add_theme_stylebox_override("panel", sb)
 	_board_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stage.add_child(_board_bg)
@@ -179,6 +184,7 @@ func _start_level() -> void:
 	_swap_first = null
 	_rng.randomize()
 	_hud.reset(_session)
+	_set_boss_look(_is_boss())
 	_power_bar.hide_shuffle()
 	_rebuild_blocks()
 	_pause_menu.visible = false
@@ -755,7 +761,12 @@ func _show_hint() -> void:
 # --- HUD e fim de fase -------------------------------------------------------------
 
 func _update_hud() -> void:
-	_hud.refresh(_session, tr("Fase diária") if GameState.daily_mode else tr("Fase %d") % (GameState.current_index + 1))
+	var title := tr("Fase %d") % (GameState.current_index + 1)
+	if GameState.daily_mode:
+		title = tr("Fase diária")
+	elif _is_boss():
+		title = tr("Chefe · Fase %d") % (GameState.current_index + 1)
+	_hud.refresh(_session, title)
 	_power_bar.refresh(_session.status == GameSession.Status.PLAYING)
 
 
@@ -805,10 +816,17 @@ func _finish() -> void:
 	var level_number := GameState.current_index + 1
 	var new_letter: bool = won and not GameState.daily_mode and Endless.gives_letter(level_number) \
 		and GameState.progress.stars_for(level_number) == 0
+	var endless: bool = GameState.is_endless()
+	var chest_before: int = GameState.chest_stars()
+	var rewards: Array = []
 	if won:
 		var gained := GameState.complete_current_level(stars, _session.score)  # salva antes da animação do bônus
 		if gained > 0:
 			power_text = tr("+%d Martelo e +%d Troca!") % [gained, gained]
+		rewards = GameState.last_rewards
+		var extra := _endless_reward_text(rewards)
+		if extra != "":
+			power_text = extra if power_text == "" else power_text + "\n" + extra
 		_power_bar.disable_all()
 		_busy = true
 		await _play_end_bonus()
@@ -835,8 +853,43 @@ func _finish() -> void:
 	if not won:
 		_result.show_shortfall(_session.shortfall())
 	_result.present(stars)
+	if endless:
+		var opened := rewards.any(func(r): return r.kind == "chest")
+		_result.show_chest(chest_before, GameState.chest_stars(), opened)
+	for r in rewards:
+		if r.kind == "rank":
+			var rank: Dictionary = Endless.RANKS[int(r.rank)]
+			_result.show_rank(tr(rank.name), Color(rank.color))
 	if new_letter:
 		_result.show_letters(phrase, revealed)
+
+
+func _is_boss() -> bool:
+	return bool(GameState.current_level().get("boss", false))
+
+
+## Fase chefe: borda dourada e mais grossa no tabuleiro e título dourado.
+func _set_boss_look(boss: bool) -> void:
+	var col := BOSS_COLOR if boss else NEON_CYAN
+	_board_style.border_color = Color(col, 0.9 if boss else 0.35)
+	_board_style.set_border_width_all(5 if boss else 2)
+	_board_style.shadow_color = Color(col, 0.3 if boss else 0.12)
+	_hud.set_title_color(col)
+
+
+## Prêmios do modo infinito (chefe, patente, baú) em linhas para a tela de resultado.
+func _endless_reward_text(rewards: Array) -> String:
+	var lines := []
+	for r in rewards:
+		var prize := Daily.reward_text(r.reward)
+		match String(r.kind):
+			"boss":
+				lines.append(tr("Chefe derrotado! %s") % prize)
+			"rank":
+				lines.append(tr("Nova patente: %s! %s") % [tr(Endless.RANKS[int(r.rank)].name), prize])
+			"chest":
+				lines.append(tr("Baú aberto! %s") % prize)
+	return "\n".join(lines)
 
 
 ## Fase diária: recorde do dia e se o prêmio já foi ganho. [texto, cor]

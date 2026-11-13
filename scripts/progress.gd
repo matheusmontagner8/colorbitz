@@ -4,6 +4,7 @@ extends RefCounted
 
 const Daily = preload("res://scripts/daily.gd")
 const Achievements = preload("res://scripts/achievements.gd")
+const Endless = preload("res://scripts/endless.gd")
 
 const SAVE_VERSION := 1
 
@@ -35,6 +36,11 @@ var daily_streak := 0
 var daily_won_day := -1
 var daily_best_day := -1
 var daily_best_score := 0
+
+## Modo infinito: baús de estrelas já abertos e maior patente já premiada
+## (índice em Endless.RANKS; -1 = nenhuma).
+var chests_opened := 0
+var rank_claimed := -1
 
 ## Contadores para as conquistas (veja [method add_stats]).
 var stats: Dictionary = {}
@@ -105,6 +111,32 @@ func endless_best(campaign_size: int) -> int:
 		if String(key).is_valid_int() and int(key) > campaign_size and int(stars[key]) > 0:
 			best = maxi(best, int(key))
 	return best
+
+
+## Prêmios do modo infinito depois de vencer a fase [param level_number] (já
+## registrada com [method record_result]): chefe na primeira vitória, patentes
+## ainda não premiadas e baús cheios. Já soma os poderes ao saldo.
+## Retorna [{"kind": "boss" | "rank" | "chest", "reward": {...}, "rank": índice}].
+func claim_endless_rewards(level_number: int, first_win: bool, campaign_size: int) -> Array:
+	var found := []
+	if first_win and Endless.is_boss(level_number):
+		found.append({"kind": "boss", "reward": Endless.BOSS_REWARD.duplicate()})
+	var rank := Endless.rank_index(endless_best(campaign_size))
+	for i in range(rank_claimed + 1, rank + 1):
+		found.append({"kind": "rank", "rank": i, "reward": Endless.RANKS[i].reward.duplicate()})
+	rank_claimed = maxi(rank_claimed, rank)
+	var full := Endless.stars_total(self, campaign_size) / Endless.CHEST_STARS
+	while chests_opened < full:
+		chests_opened += 1
+		found.append({"kind": "chest", "reward": Endless.chest_prize(chests_opened)})
+	for r in found:
+		add_powers(r.reward)
+	return found
+
+
+## Estrelas no baú atual (0 até Endless.CHEST_STARS - 1).
+func chest_stars(campaign_size: int) -> int:
+	return maxi(0, Endless.stars_total(self, campaign_size) - chests_opened * Endless.CHEST_STARS)
 
 
 func total_stars() -> int:
@@ -261,6 +293,7 @@ func to_dict() -> Dictionary:
 			"claim_day": daily_claim_day, "streak": daily_streak, "won_day": daily_won_day,
 			"best_day": daily_best_day, "best_score": daily_best_score,
 		},
+		"endless": {"chests": chests_opened, "rank": rank_claimed},
 		"stats": stats.duplicate(),
 		"achievements": achievements.keys(),
 		"tutorials": tutorials.keys(),
@@ -286,6 +319,11 @@ func from_dict(data: Dictionary) -> void:
 		for key in bonus:
 			if str(key) in POWERS:
 				powers_bonus[str(key)] = maxi(0, int(bonus[key]))
+	var endless = data.get("endless", {})
+	if typeof(endless) != TYPE_DICTIONARY:
+		endless = {}
+	chests_opened = maxi(0, int(endless.get("chests", 0)))
+	rank_claimed = clampi(int(endless.get("rank", -1)), -1, Endless.RANKS.size() - 1)
 	var daily = data.get("daily", {})
 	if typeof(daily) != TYPE_DICTIONARY:
 		daily = {}

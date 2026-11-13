@@ -5,6 +5,8 @@ extends "res://scripts/ui/overlay_panel.gd"
 const StarsView = preload("res://scripts/ui/stars_view.gd")
 const WordTiles = preload("res://scripts/ui/word_tiles.gd")
 const NearMiss = preload("res://scripts/ui/near_miss.gd")
+const ChestBar = preload("res://scripts/ui/chest_bar.gd")
+const BadgeIcon = preload("res://scripts/ui/badge_icon.gd")
 
 const WIN_COLOR := Color("#2BFF88")
 const LOSE_COLOR := Color("#FF4FD8")
@@ -24,6 +26,9 @@ var power_label: Label
 var info_label: Label
 ## Letras de "MODO INFINITO" (só ao revelar uma letra nova).
 var letters: WordTiles
+## Modo infinito: estrelas no baú e a patente nova (se ganhou uma).
+var chest: ChestBar
+var rank_row: HBoxContainer
 var next_button: Button
 var back_button: Button
 
@@ -46,6 +51,14 @@ func _init() -> void:
 	letters = WordTiles.new(56.0)
 	letters.visible = false
 	box.add_child(letters)
+	rank_row = HBoxContainer.new()
+	rank_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	rank_row.add_theme_constant_override("separation", 14)
+	rank_row.visible = false
+	box.add_child(rank_row)
+	chest = ChestBar.new()
+	chest.visible = false
+	box.add_child(chest)
 	add_spacer(16)
 	next_button = add_button("Próxima fase", func(): next_pressed.emit())
 	next_button.theme_type_variation = &"AccentButton"
@@ -68,7 +81,32 @@ func set_texts(won: bool, score_text: String, power_text: String, info: String, 
 	info_label.add_theme_color_override("font_color", info_color)
 	stars.visible = won
 	near_miss.visible = false
+	chest.visible = false
+	rank_row.visible = false
 	letters.visible = false
+
+
+## Modo infinito: anima o baú de [param from] a [param to] estrelas.
+func show_chest(from: int, to: int, opened: bool) -> void:
+	chest.visible = true
+	chest.animate(from, to, opened)
+
+
+## Patente nova: medalha grande com o nome, entrando com um pulo.
+func show_rank(rank_name: String, col: Color) -> void:
+	for child in rank_row.get_children():
+		child.queue_free()
+	var medal := BadgeIcon.new("medal", col, 96.0)
+	rank_row.add_child(medal)
+	var label := Fx.make_label(rank_row, 40, col.lightened(0.2))
+	label.text = tr("Patente %s") % rank_name
+	Fx.glow_label(label, col, 14)
+	rank_row.visible = true
+	rank_row.pivot_offset = Vector2(rank_row.size.x / 2.0, 48)
+	rank_row.scale = Vector2.ONE * 0.2
+	var t := rank_row.create_tween()
+	t.tween_interval(0.5)
+	t.tween_property(rank_row, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Derrota: mostra quanto faltou (GameSession.shortfall()).
