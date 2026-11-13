@@ -23,8 +23,6 @@ var progress = Progress.new()
 var current_index := 0
 ## Ferramentas (ex.: tools/screenshot.gd) desligam para não mexer no save real.
 var save_enabled := true
-## A dica "toque na bomba" aparece até o jogador usar a primeira bomba.
-var bomb_tip_seen := false
 ## Jogando a fase diária (current_level() devolve a fase do dia).
 var daily_mode := false
 var _daily_level: Dictionary = {}
@@ -111,7 +109,6 @@ func missing_stars(index: int) -> int:
 ## as opções, e salva.
 func reset_progress() -> void:
 	progress = progress.reset_keeping_settings()
-	bomb_tip_seen = false
 	daily_mode = false
 	current_index = 0
 	save()

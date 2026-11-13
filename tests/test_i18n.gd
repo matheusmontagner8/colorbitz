@@ -4,6 +4,7 @@ const I18n = preload("res://scripts/i18n.gd")
 const LevelLoader = preload("res://scripts/level_loader.gd")
 const Achievements = preload("res://scripts/achievements.gd")
 const Daily = preload("res://scripts/daily.gd")
+const Intros = preload("res://scripts/intros.gd")
 
 ## Textos de cena que não são traduzidos (nomes próprios e ícones).
 const SCENE_IGNORE := ["II", "Colorbitz", "Idioma: Português"]  # o último é trocado pelo código
@@ -81,6 +82,12 @@ func test_data_texts_are_translated() -> void:
 		assert_true(en.has(a.title) and en.has(a.desc), "conquista %s" % a.id)
 	for t in Daily.TEMPLATES:
 		assert_true(en.has(t.name), "fase diária %s" % t.name)
+	for id in Intros.CARDS:
+		var c: Dictionary = Intros.CARDS[id]
+		assert_true(en.has(c.title) and en.has(c.text), "cartão %s" % id)
+		for line in String(en.get(c.text, "")).split("
+"):
+			assert_true(line.length() <= 44, "cartão %s em inglês: linha longa demais: %s" % [id, line])
 
 
 func test_language_choice() -> void:

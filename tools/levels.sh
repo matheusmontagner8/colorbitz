@@ -2,7 +2,8 @@
 # Gera data/levels.json. Edite a tabela e rode: sh tools/levels.sh
 # Colunas: id cores jogadas meta valor(es) [| extras JSON]
 #   metas: s PONTOS | c COR QTD | m COR:QTD,COR:QTD (várias cores) | k MAX_SOBRA (limpar) | d JOIAS (derrubar)
-#   extras (opcional, depois de "|"): stones, wilds, ice, ice_hits, gems, mask (nome em level_loader.gd) e tip
+#   extras (opcional, depois de "|"): stones, wilds, ice, ice_hits, gems e mask (nome em level_loader.gd)
+# As explicações de cada novidade são cartões automáticos (scripts/intros.gd).
 # Portão = estrelas exigidas (via GATE_<id>).
 GATE_10=22; GATE_20=46; GATE_30=70; GATE_40=94; GATE_50=118; GATE_60=142
 out=data/levels.json
@@ -47,10 +48,10 @@ done <<'TABLE'
 # 5 cores (entra o amarelo); entram a pedra (13) e o coringa (16)
 11 5 18 s 900
 12 5 18 c 4 7
-13 5 17 s 950 | "stones": 3, "tip": "Pedras não estouram! Só a bomba\nou o Martelo conseguem quebrá-las."
+13 5 17 s 950 | "stones": 3
 14 5 16 s 1100
 15 5 16 c 3 8
-16 5 16 s 1250 | "wilds": 2, "tip": "Coringa! Ele combina com\nqualquer cor."
+16 5 16 s 1250 | "wilds": 2
 17 5 15 s 1150 | "stones": 3
 18 5 15 c 4 8
 19 5 14 s 1300 | "stones": 2, "wilds": 2
@@ -58,23 +59,23 @@ done <<'TABLE'
 # 6 cores (entra o vermelho); entram o gelo (23) e as joias (26)
 21 6 17 s 750
 22 6 15 c 5 6
-23 6 15 s 850 | "ice": 5, "tip": "Blocos congelados! Estoure um\ngrupo ao lado para soltá-los."
+23 6 15 s 850 | "ice": 5
 24 6 14 s 1100 | "wilds": 2
 25 6 14 c 2 7
-26 5 20 d 2 | "gems": 2, "tip": "Leve as joias até o fundo!\nEstoure os blocos embaixo delas."
+26 5 20 d 2 | "gems": 2
 27 6 13 s 950 | "stones": 4
 28 6 12 c 5 7
 29 6 11 s 950 | "ice": 6, "stones": 2
 30 6 11 s 1150
 # Segunda metade: metas duplas (32), formatos (33), limpar (36), gelo grosso (38)
 31 6 15 s 1000
-32 6 14 m 0:6,3:6 | "tip": "Meta dupla: estoure as\nduas cores pedidas."
-33 6 14 s 850 | "mask": "ampulheta", "tip": "Tabuleiro com formato! Os blocos\natravessam os buracos ao cair."
+32 6 14 m 0:6,3:6
+33 6 14 s 850 | "mask": "ampulheta"
 34 6 13 s 1100 | "ice": 6, "wilds": 2
 35 6 13 c 3 7
-36 6 12 k 29 | "tip": "Limpe o tabuleiro! Deixe no\nmáximo os blocos pedidos."
+36 6 12 k 29
 37 5 18 d 2 | "gems": 2, "wilds": 1
-38 6 12 c 1 7 | "ice": 6, "ice_hits": 2, "tip": "Gelo grosso: precisa de\ndois estouros ao lado."
+38 6 12 c 1 7 | "ice": 6, "ice_hits": 2
 39 6 11 s 900 | "mask": "pilares"
 40 6 14 s 1100
 41 6 13 c 4 6

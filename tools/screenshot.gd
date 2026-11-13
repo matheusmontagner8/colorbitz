@@ -5,6 +5,7 @@
 extends SceneTree
 
 const Progress = preload("res://scripts/progress.gd")
+const Intros = preload("res://scripts/intros.gd")
 ## Dia fixo (12/11/2026) para as capturas da fase diária saírem sempre iguais.
 const DEMO_DAY := 20769
 
@@ -26,7 +27,9 @@ func _initialize() -> void:
 	demo.daily_streak = 2
 	demo.stats = {"bombs_created": 1, "best_group": 11, "blocks": 420, "ice": 12, "powers": 4, "wins_no_power": 6, "wins": 9}
 	demo.achievements = {"primeira_bomba": true}
-	demo.tutorials = {"powers": true}  # o tutorial dos poderes tem cenário próprio
+	demo.tutorials = {"powers": true}  # tutorial dos poderes e cartões têm cenário próprio
+	for id in Intros.CARDS:
+		Intros.mark_seen(id, demo)
 	demo.language = "pt"  # capturas sempre em português (há um cenário em inglês no fim)
 	TranslationServer.set_locale("pt")
 	_gs.progress = demo
@@ -233,6 +236,37 @@ func _initialize() -> void:
 	await _frames(3)
 	assert(game._tutorial == null, "não repete depois de concluído")
 	print("tutorial dos poderes: ok")
+
+	# Cartões de apresentação: primeira fase de meta de cor (fase 3) e primeira bomba.
+	_gs.progress.tutorials.erase(Intros.key("goal_color"))
+	_gs.progress.tutorials.erase(Intros.key("bomb"))
+	_gs.current_index = 2
+	game._start_level()
+	await create_timer(0.5).timeout
+	assert(game._intro.visible and game._intro.id == "goal_color", "cartão da meta de cor")
+	var blocks_before_tap: int = game._session.board.count_blocks()
+	_tap(game, Vector2i(3, 8))  # o cartão bloqueia o jogo até fechar
+	game._power_bar.buttons["hammer"].pressed.emit()
+	await _frames(2)
+	assert(game._session.board.count_blocks() == blocks_before_tap and game._power == "", "jogo bloqueado com o cartão aberto")
+	await _save("res://docs/intro_color.png")
+	game._intro.find_children("*", "Button", true, false)[0].pressed.emit()
+	await _frames(2)
+	assert(not game._intro.visible and _gs.progress.tutorials.has(Intros.key("goal_color")), "fechou e ficou salvo")
+	game._session.board.load_rows(["1234512", "2345123", "3451234", "4512345", "5123451", "1200002", "2300003", "3400004", "4512345"])
+	game._rebuild_blocks()
+	await _frames(2)
+	_tap(game, Vector2i(3, 6))  # grupo de 12: vira bomba e o cartão explica
+	await create_timer(1.0).timeout
+	assert(game._intro.visible and game._intro.id == "bomb", "cartão da primeira bomba")
+	assert(game._intro.text_label.text.contains("%d blocos" % game._session.board.bomb_group_size), "texto com o tamanho do grupo")
+	await _save("res://docs/intro_bomb.png")
+	game._intro.find_children("*", "Button", true, false)[0].pressed.emit()
+	await _frames(2)
+	game._start_level()
+	await _frames(3)
+	assert(not game._intro.visible, "não repete o que já foi visto")
+	print("cartões de apresentação: ok")
 
 	# Tela de resultado (vitória forçada), com o bônus das jogadas que sobraram.
 	# Vence a fase 9 com 3 estrelas: 18 - 1 + 3 = 20, o que libera o portão da fase 10.

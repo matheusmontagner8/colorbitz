@@ -21,6 +21,7 @@ antes de acabarem as jogadas.
   <img src="docs/tutorial_swap_pair.png" width="200" alt="Tutorial da Troca">
   <img src="docs/en_game.png" width="200" alt="Jogo em inglês">
   <img src="docs/letters_result.png" width="200" alt="Nova letra de MODO INFINITO">
+  <img src="docs/intro_bomb.png" width="200" alt="Cartão explicando a bomba">
   <img src="docs/endless_levels.png" width="200" alt="Modo infinito na tela de fases">
 </p>
 
@@ -36,7 +37,7 @@ antes de acabarem as jogadas.
 - Cada fase tem uma meta e um limite de jogadas. Metas: pontuação, estourar X blocos de uma cor,
   **duas cores ao mesmo tempo**, **limpar o tabuleiro** (sobrar no máximo N blocos) e
   **derrubar joias** até o fundo das colunas.
-- **Blocos especiais** (entram aos poucos a partir da fase 13, cada um com uma dica na primeira vez):
+- **Blocos especiais** (entram aos poucos a partir da fase 13, cada um explicado num cartão na primeira vez):
   - **Pedra**: não estoura nem forma grupo; só sai com a bomba ou o Martelo.
   - **Coringa**: combina com qualquer cor (tocar nele usa a cor vizinha que forma o maior grupo).
   - **Gelo**: prende um bloco colorido até um grupo estourar ao lado (gelo grosso: duas vezes).
@@ -69,6 +70,11 @@ antes de acabarem as jogadas.
   para num teto justo (~30–70% de vitória no simulador). As estrelas contam para os poderes.
 - **Conquistas** (16): por exemplo "criar 25 bombas", "vencer 10 fases sem usar poderes",
   "vencer 7 fases diárias". Cada uma dá poderes e aparece num aviso na hora em que é liberada.
+- **Cartões de apresentação** ([`scripts/intros.gd`](scripts/intros.gd)): na primeira vez que
+  aparece uma meta (pontos, cor, duas cores, limpar, joias), uma peça (bomba, coringa, pedra,
+  gelo, gelo grosso), um tabuleiro com buracos, a fase diária ou o modo infinito, um cartão com
+  desenho, letra grande e botão "Entendi!" explica como funciona. O jogo espera o jogador fechar,
+  e cada cartão aparece uma vez só.
 - **Opções**: som, música, vibração, **efeitos reduzidos** (sem tremor de tela nem ondas
   de choque e com menos partículas, para quem é sensível a movimento), **idioma**
   (português ou inglês; começa no idioma do celular) e **apagar progresso** (com confirmação).

@@ -16,6 +16,8 @@ const TipBalloon = preload("res://scripts/ui/tip_balloon.gd")
 const PauseMenu = preload("res://scripts/ui/pause_menu.gd")
 const ResultPanel = preload("res://scripts/ui/result_panel.gd")
 const Endless = preload("res://scripts/endless.gd")
+const Intros = preload("res://scripts/intros.gd")
+const IntroCard = preload("res://scripts/ui/intro_card.gd")
 
 const NEON_CYAN := Color("#3DE0FF")
 const MOVES_COLOR := Color("#FFE53D")
@@ -32,7 +34,6 @@ const COMBO_GOOD := 6
 const COMBO_GREAT := 9
 const COMBO_AMAZING := 13
 const TUTORIAL_TEXT := "Toque em 2 ou mais blocos iguais\nencostados para estourá-los!"
-const BOMB_TIP_TEXT := "Você ganhou uma bomba! Toque nela\npara explodir os blocos em volta."
 const STUCK_TIP := "Sem jogadas! Use um poder\nou embaralhe o tabuleiro."
 const POWER_TIPS := {
 	"hammer": "Martelo: toque no bloco\nque quer destruir.",
@@ -63,8 +64,9 @@ var _board_bg: Panel
 var _holes_layer: Control
 var _hint_timer: Timer
 
-## Dica da fase (levels.json "tip"), some no primeiro toque como o tutorial.
-var _level_tip := ""
+## Cartão de apresentação (primeira vez de cada meta/peça) e a fila deles.
+var _intro: IntroCard
+var _intro_queue: Array = []
 ## Poder escolhido esperando o toque no tabuleiro ("" = toque normal).
 var _power := ""
 var _swap_first = null  # Vector2i do primeiro bloco da troca, ou null
@@ -136,6 +138,10 @@ func _build_ui() -> void:
 	_tip.bottom_margin = POWER_BAR_HEIGHT + 8.0
 	add_child(_tip)
 
+	_intro = IntroCard.new()
+	_intro.closed.connect(_on_intro_closed)
+	add_child(_intro)
+
 	_hint_timer = Timer.new()
 	_hint_timer.wait_time = HINT_DELAY
 	_hint_timer.timeout.connect(_show_hint)
@@ -178,24 +184,64 @@ func _start_level() -> void:
 	_pause_menu.visible = false
 	_result.visible = false
 	_pause_button.disabled = false
-	_level_tip = String(GameState.current_level().get("tip", ""))
 	if GameState.current_index == 0 and not GameState.daily_mode:
 		_tip.show_tip(TUTORIAL_TEXT)
-	elif _level_tip != "":
-		_tip.show_tip(_level_tip)
 	else:
 		_tip.clear()
 	_layout()
 	_update_hud()
 	_hint_timer.start()
-	_maybe_start_tutorial()
+	if _tutorial:
+		_tutorial.queue_free()
+		_tutorial = null
+	# Novidades desta fase (meta, peças, modo) que o jogador ainda não viu:
+	# um cartão para cada; depois deles, o tutorial dos poderes (se for a vez).
+	_intro.visible = false
+	_intro_queue = Intros.unseen(Intros.concepts_for(GameState.current_level(), _session.board, GameState.daily_mode), GameState.progress)
+	_show_next_intro()
+
+
+# --- Cartões de apresentação -----------------------------------------------------
+
+## Põe um cartão na fila (se ainda não foi visto) e mostra se nada estiver aberto.
+func _queue_intro(id: String) -> void:
+	if GameState.progress.tutorials.has(Intros.key(id)) or id in _intro_queue or (_intro.visible and _intro.id == id):
+		return
+	_intro_queue.append(id)
+	if not _intro.visible:
+		_show_next_intro()
+
+
+func _show_next_intro() -> void:
+	if _intro_queue.is_empty():
+		_hint_timer.start()
+		_maybe_start_tutorial()
+		return
+	_hint_timer.stop()
+	var id: String = _intro_queue.pop_front()
+	_intro.open(id, _goal_colors(), _session.board.bomb_group_size)
+
+
+func _on_intro_closed(id: String) -> void:
+	Intros.mark_seen(id, GameState.progress)
+	GameState.save()
+	_show_next_intro()
+
+
+## Cores pedidas pela meta (para o desenho do cartão).
+func _goal_colors() -> Array:
+	match _session.goal_type():
+		"color":
+			return [int(_session.goal.get("color", 0))]
+		"colors":
+			return _session.color_targets().keys()
+	return []
 
 
 ## Tutorial dos poderes: na primeira fase jogada a partir da 2 (fora a diária).
 func _maybe_start_tutorial() -> void:
-	if _tutorial:
-		_tutorial.queue_free()
-		_tutorial = null
+	if _tutorial or _session.status != GameSession.Status.PLAYING:
+		return
 	if GameState.daily_mode or GameState.current_index < 1 or GameState.progress.tutorials.has("powers"):
 		return
 	_tip.clear()
@@ -315,7 +361,7 @@ func _on_board_input(event: InputEvent) -> void:
 	var mb := event as InputEventMouseButton
 	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
 		return
-	if _busy or _session.status != GameSession.Status.PLAYING:
+	if _busy or _intro.visible or _session.status != GameSession.Status.PLAYING:
 		return
 	_hint_timer.start()  # reinicia a contagem da dica
 	var cell := Vector2i((mb.position / _cell).floor())
@@ -332,7 +378,7 @@ func _on_board_input(event: InputEvent) -> void:
 	if result.is_empty():
 		_nudge(cell)
 		return
-	if _tip.is_showing(TUTORIAL_TEXT) or (_level_tip != "" and _tip.is_showing(_level_tip)):
+	if _tip.is_showing(TUTORIAL_TEXT):
 		_tip.hide_tip()
 	_animate(result)
 
@@ -408,7 +454,7 @@ func _shuffle_board() -> void:
 
 ## Liga/desliga o modo do poder. O poder só é gasto quando o jogador o usa.
 func _toggle_power(power: String) -> void:
-	if _busy or _session.status != GameSession.Status.PLAYING:
+	if _busy or _intro.visible or _session.status != GameSession.Status.PLAYING:
 		return
 	if _tutorial and not _tutorial.allows_power(power):
 		return
@@ -638,9 +684,6 @@ func _play_effects(result: Dictionary) -> void:
 		_shake(18.0)
 		GameState.vibrate(160)
 		_fx.combo_text("BUM!" if result.exploded.size() == 1 else tr("BUM x%d!") % result.exploded.size(), col, _board_center())
-		GameState.bomb_tip_seen = true
-		if _tip.is_showing(BOMB_TIP_TEXT):
-			_tip.hide_tip()
 		return
 
 	if result.get("power") == "hammer":
@@ -680,8 +723,7 @@ func _make_bomb(p: Vector2i) -> void:
 	t.tween_property(block, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	Audio.play_sfx("powerup")
 	_fx.burst(_cell_center(p), BlockView.BOMB_COLOR, false)
-	if not GameState.bomb_tip_seen:
-		_tip.show_tip(BOMB_TIP_TEXT)
+	_queue_intro("bomb")  # primeira bomba: explica como usar
 
 
 func _shake(strength: float) -> void:
