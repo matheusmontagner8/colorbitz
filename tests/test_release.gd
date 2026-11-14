@@ -20,6 +20,22 @@ func test_version_matches_android_export() -> void:
 	assert_true(int(cfg.get_value("preset.0.options", "version/code")) >= 2)
 
 
+## O preset do AAB (Play) só pode diferir do APK de teste no Gradle e no formato.
+func test_release_preset_matches_debug_preset() -> void:
+	var cfg := _android_options()
+	assert_eq(cfg.get_value("preset.1", "name"), "Android AAB")
+	var allowed := ["gradle_build/use_gradle_build", "gradle_build/export_format"]
+	var debug_keys := cfg.get_section_keys("preset.0.options")
+	assert_eq(cfg.get_section_keys("preset.1.options"), debug_keys, "mesmas opções nos dois presets")
+	for key in debug_keys:
+		if key not in allowed:
+			assert_eq(cfg.get_value("preset.1.options", key), cfg.get_value("preset.0.options", key), "opção diferente: %s" % key)
+	assert_true(cfg.get_value("preset.1.options", "gradle_build/use_gradle_build"), "AAB precisa do Gradle")
+	assert_eq(cfg.get_value("preset.1.options", "gradle_build/export_format"), 1, "formato AAB")
+	for section in ["preset.0.options", "preset.1.options"]:
+		assert_eq(str(cfg.get_value(section, "keystore/release_password", "")), "", "senha nunca no repositório")
+
+
 func test_android_backup_allowed() -> void:
 	var cfg := _android_options()
 	assert_true(cfg.get_value("preset.0.options", "user_data_backup/allow", false),

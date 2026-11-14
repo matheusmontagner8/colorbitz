@@ -192,6 +192,29 @@ godot --headless --path . --export-debug Android build/colorbitz-debug.apk
 adb install -r build/colorbitz-debug.apk   # celular ligado no USB com depuração ativada
 ```
 
+### Pacote de release para a Google Play (AAB)
+
+O preset "Android AAB" usa o build do Gradle (o modelo é instalado em `android/` na primeira
+vez) e assina com a **chave de upload**, que fica fora do repositório: a pasta da chave tem um
+`env.sh` com `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`, `_USER` e `_PASSWORD`.
+
+```bash
+tools/release.sh ~/colorbitz-keys   # gera build/colorbitz-release.aab
+```
+
+A cada envio para a Play, aumente `version/code` (e `version/name`) nos dois presets e
+`application/config/version` no `project.godot`; o teste `test_release.gd` confere se estão iguais.
+
+### Materiais da loja
+
+```bash
+godot --path . -s tools/store_assets.gd   # store/pt-BR e store/en-US
+```
+
+Gera o banner 1024×500 e 8 capturas 1080×1920 com legenda, desenhando as telas reais do jogo
+em alta resolução. Os textos da página e as respostas dos formulários estão em
+[`store/LISTING.md`](store/LISTING.md).
+
 ## Estrutura
 
 ```
@@ -206,7 +229,9 @@ scripts/ui telas (menu, fases, conquistas, opções) e componentes da tela de jo
            game_hud, power_bar, board_fx, tip_balloon, pause_menu, result_panel,
            power_tutorial
 tests/     testes da lógica e executor
-tools/     teste de fumaça, simulador de dificuldade, gerador de áudio e de ícones
+store/     imagens e textos da página da Google Play
+tools/     teste de fumaça, simulador de dificuldade, geradores de áudio, ícones e materiais
+           da loja, e o script do pacote de release
 ```
 
 ## Roteiro
