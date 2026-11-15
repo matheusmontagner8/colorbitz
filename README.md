@@ -28,6 +28,8 @@ antes de acabarem as jogadas.
 
 > Projeto em desenvolvimento: este é o MVP do meu primeiro jogo para Android.
 
+>  Desenvolvido com apoio do Claude Code (IA); as regras do jogo, o equilíbrio das fases e os testes no celular foram decisões e trabalho meus.
+
 ## Como jogar
 
 - Toque em um bloco: ele e todos os vizinhos da mesma cor (cima, baixo, esquerda,
